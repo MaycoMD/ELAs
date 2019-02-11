@@ -39,7 +39,7 @@
 
 #define tipoSensor 1                  // tipo de sensor a utilizar (0~3)
 #define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
-#define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
+#define frecuencia 10                 // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -196,6 +196,7 @@ void loop()
       digitalWrite(RELE1pin, LOW);
       get_senial();
       guardar_datos();
+      imprimir_datos();
       if (conectar_telit())
       {
         if (enviar_datos())
@@ -299,20 +300,13 @@ bool comandoAT(String comando, char resp[3])
       }
       while (c != LF);
     }
-    if (respuesta.indexOf("ERROR") != -1)
-    {
-      //Serial.println(" -> ERROR");
-      Serial.flush();
-      Serial.println(respuesta);
-    }
+    Serial.println(respuesta);
   }
   mySerial.flush();
   mySerial.end();
   Serial.flush();
-  Serial.println(respuesta);
   if (contador != 0)
   {
-    //Serial.println(" -> OK");
     return true;
   }
   else
@@ -477,7 +471,7 @@ bool desconectar_telit(void)
 }
 //-----------------------------------------------------------------------------
 //transmite vía comunicación serie (UART) el comando AT adecuado para apagar
-//el módulo GSM/
+//el módulo GSM
 bool apagar_telit(void)
 {
   if (comandoAT("AT+CFUN=0,0", "OK"))
@@ -493,9 +487,7 @@ void get_fecha_hora(void)
 {
   if (comandoAT("AT+CCLK?", "OK"))
   {
-
     fechaYhora = respuesta.substring(10, 29);
-    //Serial.println("fecha y hora del sistema: " + fechaYhora);
     return true;
   }
   return false;
@@ -540,9 +532,10 @@ void set_alarma(void)
 {
   String strHora = "0";
   String strMinutos = "0";
-  String strHora_temp = fechaYhora.substring(11, 13);
+  int index = fechaYhora.indexOf(",");
+  String strHora_temp = fechaYhora.substring(index + 1, index + 3);
   int hora = strHora_temp.toInt();
-  String strMinutos_temp = fechaYhora.substring(14, 16);
+  String strMinutos_temp = fechaYhora.substring(index + 4, index + 6);
   int minutos = strMinutos_temp.toInt();
   bool seteada = 0;
 
@@ -590,7 +583,6 @@ void set_alarma(void)
   }
   delay(1000);
   comandoAT("AT+CALA=\"" + strHora + ":" + strMinutos + ":00+00\",0,4,,\"0\",0", "OK");
-  //Serial.println("Alarma programada a las " + strHora + ":" + strMinutos);
   return;
 }
 
@@ -599,8 +591,8 @@ void get_senial(void)
 {
   if (comandoAT("AT+CSQ", "OK"))
   {
-    valorSenial = respuesta.substring(8, 12);
-    //Serial.println("Nivel de senial: " + valorSenial);
+    int index = respuesta.indexOf(":");
+    valorSenial = respuesta.substring(index + 2, index + 6);
     return true;
   }
   return false;
@@ -608,20 +600,19 @@ void get_senial(void)
 //---------------------------------------------------------------------------------------
 bool enviar_sms(void)
 {
-  int c = 5;
   if (comandoAT("AT+CMGF=1", "OK"))
   {
     if (comandoAT("AT+CMGS=\"3513420474\",129", ">"))
     {
       String datos = ID;
-      datos.concat("reiniciada\r");
+      datos.concat("\r");
       datos.concat(fechaYhora);
-      datos.concat(",");
+      datos.concat("\r");
       datos.concat(valorSensor);
-      datos.concat(",");
-      datos.concat(valorSenial);
-      datos.concat(",");
+      datos.concat("\r");
       datos.concat(valorTension);
+      datos.concat("\r");
+      datos.concat(valorSenial);
       datos.concat(char(26));
       if (comandoAT(datos, "+CMGS"))
       {
@@ -680,7 +671,8 @@ void calibrar_sensor(void)
           break;
         case 1: sensor_SDI12();
           break;
-        //        case 2: sensor_OTT();
+        case 2: sensor_OTT();
+          break;
         default: break;
       }
       Serial.println(valorSensor);
@@ -850,18 +842,31 @@ void sensor_OTT(void)
 void sensor_bateria()
 {
   valorTension = 0;
-  for (byte i = 0; i < 16; i++)
+  for (int i = 0; i < 16; i++)
   {
     valorTension += analogRead(VBATpin);
   }
   valorTension /= 16.0;
-  valorTension = ((valorTension * 5.0) / 1023.0) + 10.0;
+  valorTension = ((valorTension * 5.0) / 1023.0) + 10.0 + 0.7;
   //  Serial.print("Nivel de bateria: ");
   //  Serial.print(valorTension);
   //  Serial.println(" V");
   return;
 }
 /*------------------------------ FIN TENSIÓN BATERÍA ---------------------------------*/
+
+/*------------------------------------------------------------------------------------*/
+void imprimir_datos()
+{
+  Serial.println(ID + ": " +
+                 fechaYhora + "," +
+                 valorSensor + "," +
+                 valorTension + "," +
+                 valorSenial);
+  return;
+}
+/*------------------------------------------------------------------------------------*/
+
 
 /*----------------------------- FUNCIONES TARJETA SD ---------------------------------*/
 void guardar_datos()
@@ -893,7 +898,7 @@ void guardar_datos()
     dataFile.print(",");
     dataFile.print(String(valorSensor));
     dataFile.print(",");
-    dataFile.print(String(valorTension, 1));
+    dataFile.print(String(valorTension));
     dataFile.print(",");
     dataFile.print(valorSenial);
     dataFile.print("\r\n");
