@@ -85,7 +85,7 @@ void loop()
   comandoAT("AT&K0", "OK");
   comandoAT("ATV1", "OK");
   comandoAT("AT+CSDF=1,2", "OK");
-  comandoAT("AT+CCLK=\"2019/02/11,09:30:00+00\"","OK");
+  comandoAT("AT+CCLK=\"2019/02/13,14:09:00+00\"","OK");
   comandoAT("AT#USERID=\"gprs\"", "OK");
   comandoAT("AT#PASSW=\"gprs\"", "OK");
   comandoAT("AT+CGDCONT=1,\"IP\",\"gprs.personal.com\"", "OK");

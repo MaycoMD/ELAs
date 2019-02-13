@@ -5,7 +5,7 @@
 #include <SD.h>
 
 #define VBATpin A0
-#define RELE1pin A1
+#define RELEpin A1
 #define s420 A2
 #define OTTb A3
 #define OTTa A4
@@ -60,7 +60,7 @@
 #define CR 13
 
 const float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
-const String ID = "ELF00";                  // Identificador de la estación
+const String ID = "ELR00";                  // Identificador de la estación
 int valorSensor;
 float valorTension = 0;
 String fechaYhora;
@@ -98,13 +98,13 @@ void setup()
   pinMode(SDCSpin, OUTPUT);
   pinMode(RSTpin, OUTPUT);
   pinMode(SYSRSTpin, OUTPUT);
-  pinMode(RELE1pin, OUTPUT);
+  pinMode(RELEpin, OUTPUT);
   pinMode(LEDpin, OUTPUT);
   pinMode(TXpin, OUTPUT);
 
   digitalWrite(RSTpin, LOW);
   digitalWrite(SYSRSTpin, LOW);
-  digitalWrite(RELE1pin, LOW);
+  digitalWrite(RELEpin, LOW);
   digitalWrite(LEDpin, LOW);
   //Serial.println("hecho.");
 
@@ -117,8 +117,6 @@ void setup()
 
   //calibrar_sensor();
   //Serial.print("Leyendo sensores... ");
-  digitalWrite(RELE1pin, HIGH);
-  delay(delaySensor * 1000);
   switch (tipoSensor)
   {
     case 0: //sensor_420ma();
@@ -127,7 +125,6 @@ void setup()
       break;
     default: break;
   }
-  digitalWrite(RELE1pin, LOW);
   sensor_bateria();
   //Serial.println("hecho.");
 
@@ -170,6 +167,10 @@ void loop()
     sleep_cpu();
     sleep_disable();
   }
+  if (tipoSensor == 2)
+  {
+    sensor_OTT();
+  }
 
   if (interrupcion == true)
   {
@@ -183,8 +184,6 @@ void loop()
       get_fecha_hora();
       set_alarma();
       sensor_bateria();
-      digitalWrite(RELE1pin, HIGH);
-      delay(delaySensor * 1000);
       switch (tipoSensor)
       {
         case 0: sensor_420ma();
@@ -193,7 +192,6 @@ void loop()
           break;
         default: break;
       }
-      digitalWrite(RELE1pin, LOW);
       get_senial();
       guardar_datos();
       imprimir_datos();
@@ -497,26 +495,14 @@ void get_fecha_hora(void)
 //y setea dicho valor en el RTC del módulo TELIT
 void set_fecha_hora(void)
 {
-  char a;
   delay(1000);
   Serial.print("Configurar fecha/hora? <s/n>: ");
-  if (Serial.findUntil("s", "\r"))
+  if (Serial.readStringUntil("s"))
   {
     Serial.println();
-    //Serial.setTimeout(20000);
+    Serial.setTimeout(20000);
     Serial.print("Introduzca la fecha y hora en formato <aaaa/mm/dd,hh:mm:ss>: ");
-    fechaYhora = "";
-    do
-    {
-      a = LF;
-      if (Serial.available())
-      {
-        a = Serial.read();
-        fechaYhora += a;
-      }
-    }
-    while (a != CR);
-    //fechaYhora = Serial.readStringUntil("\r");
+    fechaYhora = Serial.readStringUntil(CR);
     Serial.println();
     comandoAT("AT+CCLK=\"" + fechaYhora + "+00\"", "OK");
   }
@@ -636,6 +622,8 @@ bool borrar_sms(void)
 /*--------------------------------- SENSOR 4-20mA ------------------------------------*/
 void sensor_420ma(void)
 {
+  digitalWrite(RELEpin, HIGH);
+  delay(delaySensor * 1000);
   float valorSensorTemp = 0;
   int valorSensorInt = 0;
   float m = valorMax / 820.0;
@@ -643,26 +631,26 @@ void sensor_420ma(void)
   for (byte i = 0; i < 32; i++)
   {
     valorSensorTemp += analogRead(s420);
-    delay(100);
+    delay(10);
   }
   valorSensorTemp /= 32.0;
   valorSensorTemp = (valorSensorTemp * m) - b;
   valorSensor = valorSensorTemp;
+  digitalWrite(RELEpin, LOW);
   return;
 }
 
 void calibrar_sensor(void)
 {
-  String c;
   Serial.print("Calibrar sensor? <s/n>: ");
-  Serial.readStringUntil(CR);
+  respuesta = Serial.readStringUntil(CR);
   Serial.println();
-  if (c.indexOf('s') != -1)
+  if (respuesta.indexOf("s") != -1)
   {
     Serial.println("Modo calibracion. Presione 'e' para salir");
-    digitalWrite(RELE1pin, HIGH);
+    digitalWrite(RELEpin, HIGH);
     delay(delaySensor * 1000);
-    while (c.indexOf('e') == -1)
+    while (respuesta.indexOf('e') == -1)
     {
       delay(1000);
       switch (tipoSensor)
@@ -678,10 +666,10 @@ void calibrar_sensor(void)
       Serial.println(valorSensor);
       if (Serial.available() > 0)
       {
-        c = Serial.readString();
+        respuesta = Serial.readStringUntil(CR);
       }
     }
-    digitalWrite(RELE1pin, LOW);
+    digitalWrite(RELEpin, LOW);
   }
   return;
 }
@@ -691,6 +679,8 @@ void calibrar_sensor(void)
 /*--------------------------------- SENSOR SDI-12 ------------------------------------*/
 void sensor_SDI12(void)
 {
+  digitalWrite(RELEpin, HIGH);
+  delay(delaySensor * 1000);
   mySDI12.begin();
 
   String sdiResponse = "";
@@ -731,6 +721,7 @@ void sensor_SDI12(void)
   mySDI12.clearBuffer();
 
   mySDI12.end();
+  digitalWrite(RELEpin, LOW);
   return;
 }
 /*--------------------------------- FIN SENSOR SDI-12 --------------------------------*/
@@ -842,11 +833,12 @@ void sensor_OTT(void)
 void sensor_bateria()
 {
   valorTension = 0;
-  for (int i = 0; i < 16; i++)
+  for (int i = 0; i < 32; i++)
   {
     valorTension += analogRead(VBATpin);
+    delay(10);
   }
-  valorTension /= 16.0;
+  valorTension /= 32.0;
   valorTension = ((valorTension * 5.0) / 1023.0) + 10.0 + 0.7;
   //  Serial.print("Nivel de bateria: ");
   //  Serial.print(valorTension);
@@ -880,7 +872,7 @@ void guardar_datos()
     dataFile.print(",");
     dataFile.print(String(valorSensor));
     dataFile.print(",");
-    dataFile.print(String(valorTension, 1));
+    dataFile.print(String(valorTension));
     dataFile.print(",");
     dataFile.print(valorSenial);
     dataFile.print("\r\n");
