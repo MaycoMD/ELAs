@@ -60,7 +60,7 @@
 #define CR 13
 
 const float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
-const String ID = "ELA00";                  // Identificador de la estación
+const String ID = "ELA02";                  // Identificador de la estación
 int valorSensor;
 float valorTension = 0;
 String fechaYhora;
@@ -162,7 +162,6 @@ void loop()
     sleep_enable();
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     attachInterrupt(digitalPinToInterrupt(RTCpin), RTCint, LOW);
-    //attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
     interrupts();
     sleep_cpu();
     sleep_disable();
@@ -178,7 +177,7 @@ void loop()
     delay(2000);
     if (digitalRead(RTCpin) == LOW)
     {
-      Watchdog.enable();
+      Watchdog.enable(8000);
       Watchdog.reset();
       digitalWrite(LEDpin, LOW);
       reset_telit();
@@ -195,32 +194,32 @@ void loop()
       }
       get_senial();
 
-//      if(conectar_telit())
-//      {
-//        if(enviar_datos())
-//        {
-//          if(iniciar_SD())
-//          {
-//            if(SD.exists("datosD"))
-//            {
-//              if(enviar_datos_sd())
-//              {
-//                SD.remove("datosD");
-//              }
-//            }
-//          }
-//          terminar_SD();
-//        }
-//        else
-//        {
-//          if(iniciar_SD())
-//          {
-//            guardar_datos();
-//          }
-//          terminar_SD();
-//        }
-//      }
-      
+      //      if(conectar_telit())
+      //      {
+      //        if(enviar_datos())
+      //        {
+      //          if(iniciar_SD())
+      //          {
+      //            if(SD.exists("datosD"))
+      //            {
+      //              if(enviar_datos_sd())
+      //              {
+      //                SD.remove("datosD");
+      //              }
+      //            }
+      //          }
+      //          terminar_SD();
+      //        }
+      //        else
+      //        {
+      //          if(iniciar_SD())
+      //          {
+      //            guardar_datos();
+      //          }
+      //          terminar_SD();
+      //        }
+      //      }
+
       if (iniciar_SD())
       {
         if (guardar_datos())
@@ -246,14 +245,11 @@ void loop()
     }
     else
     {
-      //Serial.println("falsa alarma");
       interrupcion = false;
-
     }
     if (tipoSensor == 2)
     {
       attachInterrupt(digitalPinToInterrupt(RTCpin), RTCint, LOW);
-      //attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
       interrupts();
     }
   }
@@ -281,7 +277,6 @@ void SMSint()
 {
   sleep_disable();
   noInterrupts();
-  Watchdog.disable();
   delayMicroseconds(10000);
   if (digitalRead(SMSRCVpin) == HIGH)
   {
@@ -297,6 +292,7 @@ void SMSint()
 
 bool comandoAT(String comando, char resp[3], byte contador)
 {
+  Watchdog.enable(8000);
   Watchdog.reset();
   mySerial.begin(9600);
   char c;
@@ -316,9 +312,9 @@ bool comandoAT(String comando, char resp[3], byte contador)
     //mySerial.print('\b');
     mySerial.println(comando);
     Serial.print(comando);
+    Watchdog.reset();
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
-      Watchdog.reset();
       do
       {
         c = LF;
@@ -375,7 +371,7 @@ bool conectar_telit(void)
     Watchdog.disable();
     if (comandoAT("AT#GPRS=1", "OK", 10))
     {
-      Watchdog.enable();
+      Watchdog.enable(8000);
       Watchdog.reset();
       if (comandoAT("AT#FTPTO=5000", "OK", 10))
       {
@@ -433,7 +429,6 @@ bool enviar_datos_sd(void)
       }
       for (int i = 0; i < (times); i++)
       {
-        Watchdog.reset();
         if (i < (times - 1))
         {
           bytes2send = 1500;
@@ -448,6 +443,10 @@ bool enviar_datos_sd(void)
         command.concat(String(bytes2send));
         command.concat(",");
         command.concat(eof);
+        while (mySerial.available() > 0)
+        {
+          char basura = mySerial.read();
+        }
         if (comandoAT(command, ">", 1))
         {
           mySerial.begin(9600);
@@ -547,7 +546,7 @@ void set_fecha_hora(void)
   respuesta = "";
   Serial.print("Configurar fecha/hora? <s/n>: ");
   respuesta = Serial.readStringUntil(CR);
-  if (respuesta.indexOf("s")!=-1)
+  if (respuesta.indexOf("s") != -1)
   {
     fechaYhora = "";
     Serial.println();
@@ -689,7 +688,7 @@ void sensor_420ma(void)
   valorSensorTemp = (valorSensorTemp * m) - b;
   valorSensor = valorSensorTemp;
   digitalWrite(RELEpin, LOW);
-  Watchdog.enable();
+  Watchdog.enable(8000);
   return;
 }
 
@@ -728,7 +727,7 @@ void calibrar_sensor(void)
     }
     digitalWrite(RELEpin, LOW);
   }
-  Watchdog.enable();
+  Watchdog.enable(8000);
   Watchdog.reset();
   return;
 }
