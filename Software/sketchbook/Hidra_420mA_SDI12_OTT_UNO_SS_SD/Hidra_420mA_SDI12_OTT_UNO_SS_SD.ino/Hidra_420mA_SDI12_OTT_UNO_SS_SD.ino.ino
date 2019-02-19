@@ -1,3 +1,5 @@
+//#include "TimerOne.h"
+#include <Adafruit_SleepyDog.h>
 #include <avr/sleep.h>
 #include "SoftwareSerialMod.h"
 #include "SDI12Mod.h"
@@ -32,14 +34,14 @@
 // 8 -> Software Rx
 // 9 -> Software Tx
 // 10 -> Telit reset
-// 11 -> Telit power monitor (SD_MOSI)
-// 12 -> (SD_MISO)
-// 13 -> (SD_CLK)
+// 11 -> SD_MOSI
+// 12 -> SD_MISO
+// 13 -> SD_CLK
 // 14 -> GND
 
 #define tipoSensor 1                  // tipo de sensor a utilizar (0~3)
 #define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
-#define frecuencia 10                 // frecuencia de transmisión de los datos (en minutos)
+#define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -48,11 +50,9 @@
 // 3 -> Pulsos (No implementado)
 
 // ESTACIONES
-// ELR01 -> Quillinzo
 // ELR02 -> Inriville
 // ELR03 -> Piedras Blancas
 // ELR04 -> Alpa Corral
-// ELR05 -> Santa Rosa
 // ELF01 -> Cruz Alta
 // ELF02 -> Saladillo
 
@@ -60,13 +60,15 @@
 #define CR 13
 
 const float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
-const String ID = "ELR00";                  // Identificador de la estación
+const String ID = "ELA00";                  // Identificador de la estación
 int valorSensor;
 float valorTension = 0;
 String fechaYhora;
 String valorSenial;
-bool interrupcion = false;
+volatile bool interrupcion = false;
+volatile bool timerInt = false;
 String respuesta = "";
+File dataFile;
 
 unsigned int cuadrante_inicial;  // definiciones de variables
 unsigned int cuadrante_final;    // utilizadas con el sensor
@@ -84,10 +86,9 @@ void setup()
   delay(500);
   Serial.begin(9600);
   while (!Serial) {}
-  Serial.setTimeout(15000); //tiempo en milisegundos
-  //Serial.println();
-  //Serial.print("Iniciando sistema... ");
-
+  Serial.setTimeout(10000); //tiempo en milisegundos
+  Watchdog.enable(8000);
+  Watchdog.reset();
   pinMode(VBATpin, INPUT);
   pinMode(s420, INPUT);
   pinMode(SMSRCVpin, INPUT);
@@ -106,44 +107,44 @@ void setup()
   digitalWrite(SYSRSTpin, LOW);
   digitalWrite(RELEpin, LOW);
   digitalWrite(LEDpin, LOW);
-  //Serial.println("hecho.");
 
-  //Serial.print("Iniciando tarjeta SD... ");
-  if (!SD.begin(SDCSpin))
-  {
-    //Serial.println("fallo");
-  }
-  //Serial.println("hecho.");
-
+  attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
+  interrupts();
+  iniciar_SD();
+  terminar_SD();
   //calibrar_sensor();
-  //Serial.print("Leyendo sensores... ");
+
   switch (tipoSensor)
   {
-    case 0: //sensor_420ma();
+    case 0: sensor_420ma();
       break;
     case 1: sensor_SDI12();
       break;
     default: break;
   }
   sensor_bateria();
-  //Serial.println("hecho.");
-
   if (reset_telit())
   {
-    get_fecha_hora();
-    //set_fecha_hora();
-    set_alarma();
-    get_senial();
-    enviar_sms();
-    borrar_sms();
+    if (iniciar_SD())
+    {
+      get_fecha_hora();
+      //set_fecha_hora();
+      set_alarma();
+      get_senial();
+      if (guardar_datos())
+      {
+        enviar_sms();
+        SD.remove("datosD");
+      }
+      borrar_sms();
+    }
+    terminar_SD();
   }
   apagar_telit();
 
   if (tipoSensor == 2)
   {
-    //Serial.println("Habilitando interrupciones");
     attachInterrupt(digitalPinToInterrupt(RTCpin), RTCint, LOW);
-    attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
     interrupts();
   }
 }
@@ -152,17 +153,16 @@ void setup()
 /*---------------------------PROGRAMA PRINCIPAL --------------------------------------*/
 void loop()
 {
+  Watchdog.reset();
   delay(5000);
-
   if (tipoSensor != 2)
   {
-    //Serial.println("Habilitando interrupciones");
-    //Serial.println("Iniciando modo de bajo consumo");
+    Watchdog.disable();
     Serial.flush();
     sleep_enable();
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     attachInterrupt(digitalPinToInterrupt(RTCpin), RTCint, LOW);
-    attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
+    //attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
     interrupts();
     sleep_cpu();
     sleep_disable();
@@ -174,11 +174,12 @@ void loop()
 
   if (interrupcion == true)
   {
-    //Serial.print("(interrupcion) alarma -> ");
+    interrupts();
     delay(2000);
     if (digitalRead(RTCpin) == LOW)
     {
-      //Serial.println("interrupcion por RTC");
+      Watchdog.enable();
+      Watchdog.reset();
       digitalWrite(LEDpin, LOW);
       reset_telit();
       get_fecha_hora();
@@ -193,20 +194,52 @@ void loop()
         default: break;
       }
       get_senial();
-      guardar_datos();
-      imprimir_datos();
-      if (conectar_telit())
+
+//      if(conectar_telit())
+//      {
+//        if(enviar_datos())
+//        {
+//          if(iniciar_SD())
+//          {
+//            if(SD.exists("datosD"))
+//            {
+//              if(enviar_datos_sd())
+//              {
+//                SD.remove("datosD");
+//              }
+//            }
+//          }
+//          terminar_SD();
+//        }
+//        else
+//        {
+//          if(iniciar_SD())
+//          {
+//            guardar_datos();
+//          }
+//          terminar_SD();
+//        }
+//      }
+      
+      if (iniciar_SD())
       {
-        if (enviar_datos())
+        if (guardar_datos())
         {
-          SD.remove("datosD.txt");
+          if (conectar_telit())
+          {
+            if (enviar_datos_sd())
+            {
+              SD.remove("datosD");
+            }
+            if (!desconectar_telit())
+            {
+              reset_telit();
+              get_fecha_hora();
+              set_alarma();
+            }
+          }
         }
-        if (!desconectar_telit())
-        {
-          reset_telit();
-          get_fecha_hora();
-          set_alarma();
-        }
+        terminar_SD();
       }
       apagar_telit();
       interrupcion = false;
@@ -219,9 +252,8 @@ void loop()
     }
     if (tipoSensor == 2)
     {
-      //Serial.println("Habilitando interrupciones");
       attachInterrupt(digitalPinToInterrupt(RTCpin), RTCint, LOW);
-      attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
+      //attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
       interrupts();
     }
   }
@@ -229,17 +261,19 @@ void loop()
 /*---------------------------- FIN PROGRAMA PRINCIPAL --------------------------------*/
 
 
-/*--------------------------- INTERRUPCIONES EXTERNAS --------------------------------*/
+/*--------------------------- INTERRUPCIONES -------------------------------------*/
 // Rutina de interrupción por la alarma programada en el RTC del módulo Telit
 void RTCint()
 {
   sleep_disable(); //fully awake now
   detachInterrupt(digitalPinToInterrupt(RTCpin));
+  Watchdog.reset();
   delayMicroseconds(10000);
   if (digitalRead(RTCpin) == LOW)
   {
     interrupcion = true;
   }
+  interrupts();
   return;
 }
 //---------------------------------------------------------------------------------------
@@ -247,6 +281,7 @@ void SMSint()
 {
   sleep_disable();
   noInterrupts();
+  Watchdog.disable();
   delayMicroseconds(10000);
   if (digitalRead(SMSRCVpin) == HIGH)
   {
@@ -260,11 +295,10 @@ void SMSint()
 
 /*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
 
-bool comandoAT(String comando, char resp[3])
+bool comandoAT(String comando, char resp[3], byte contador)
 {
-  delay(1000);
+  Watchdog.reset();
   mySerial.begin(9600);
-  byte contador = 10;
   char c;
   respuesta = "ERROR";
 
@@ -275,10 +309,7 @@ bool comandoAT(String comando, char resp[3])
 
   while ((respuesta.indexOf(resp) == -1) && (contador != 0))
   {
-    if (contador != 10)
-    {
-      delay(5000);
-    }
+    delay(2000);
     respuesta = "";
     contador--;
     mySerial.flush();
@@ -287,6 +318,7 @@ bool comandoAT(String comando, char resp[3])
     Serial.print(comando);
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
+      Watchdog.reset();
       do
       {
         c = LF;
@@ -303,7 +335,7 @@ bool comandoAT(String comando, char resp[3])
   mySerial.flush();
   mySerial.end();
   Serial.flush();
-  if (contador != 0)
+  if (respuesta.indexOf(resp) != -1)
   {
     return true;
   }
@@ -317,21 +349,17 @@ bool comandoAT(String comando, char resp[3])
 //comando AT para verificar que está funcionando normalmente.
 bool reset_telit(void)
 {
-  //Serial.print("Reiniciando modulo Telit... ");
-  delay(5000);
-
+  Watchdog.reset();
   digitalWrite(RSTpin, HIGH);
   delay(220);
   digitalWrite(RSTpin, LOW);
   delay(5000);
-
-  //Serial.println("hecho.");
-
-  if (comandoAT("AT", "OK"))
+  Watchdog.reset();
+  if (comandoAT("AT", "OK", 10))
   {
-    if (comandoAT("AT+CFUN=1", "OK"))
+    if (comandoAT("AT+CFUN=1", "OK", 10))
     {
-      if (comandoAT("AT+CSDF=1,2", "OK"))
+      if (comandoAT("AT+CSDF=1,2", "OK", 10))
       {
         return true;
       }
@@ -340,33 +368,22 @@ bool reset_telit(void)
   return false;
 }
 //----------------------------------------------------------------------------
-bool despertar_telit(void)
-{
-  delay(2000);
-  if (comandoAT("AT+CFUN=1", "OK"))
-  {
-    if (comandoAT("AT#WAKE=0", "OK"))
-    {
-      comandoAT("AT+CSDF=1,2", "OK");
-    }
-    return true;
-  }
-  return false;
-}
-//----------------------------------------------------------------------------
 bool conectar_telit(void)
 {
-  if (comandoAT("AT#GPRS=0", "OK"))
+  if (comandoAT("AT#GPRS=0", "OK", 10))
   {
-    if (comandoAT("AT#GPRS=1", "OK"))
+    Watchdog.disable();
+    if (comandoAT("AT#GPRS=1", "OK", 10))
     {
-      if (comandoAT("AT#FTPTO=5000", "OK"))
+      Watchdog.enable();
+      Watchdog.reset();
+      if (comandoAT("AT#FTPTO=5000", "OK", 10))
       {
-        if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK")) // 0->Active Mode, 1->Passive Mode
+        if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10)) // 0->Active Mode, 1->Passive Mode
         {
-          if (comandoAT("AT#FTPTYPE=1", "OK")) // 0->Binary, 1->ASCII
+          if (comandoAT("AT#FTPTYPE=1", "OK", 10)) // 0->Binary, 1->ASCII
           {
-            if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK"))
+            if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
             {
               return true;
             }
@@ -377,16 +394,31 @@ bool conectar_telit(void)
   }
   return false;
 }
-//-----------------------------------------------------------------------------
-//Inicializa el módulo GSM/GPRS y trasmite por UART los comandos adecuados
-//para iniciar una conexión a internet y transmitir los datos al servidor web.
-//Si se logra establecer una conexión GPRS, envía de a uno los datos
-//almacenados en orden en el array de datos guardados.
-bool enviar_datos(void)
+//---------------------------------------------------------------------------------------
+//bool enviar_datos(void)
+//{
+//  String datos;
+//  String largo = String(datos.length());
+//
+//  if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK",1))
+//  {
+//    if (comandoAT("AT#FTPAPPEXT=" + largo + ",1", ">",1))
+//    {
+//      if (comandoAT(datos, "OK",1))
+//      {
+//        return true;
+//      }
+//    }
+//  }
+//  return false;
+//}
+//---------------------------------------------------------------------------------------
+bool enviar_datos_sd(void)
 {
-  if (SD.exists("datosD.txt"))
+  Watchdog.reset();
+  if (SD.exists("datosD"))
   {
-    File dataFile = SD.open("datosD.txt");
+    dataFile = SD.open("datosD", FILE_READ);
     char c;
     if (dataFile)
     {
@@ -394,12 +426,14 @@ bool enviar_datos(void)
       unsigned int times = (largo / 1500);
       unsigned int rest = largo % 1500;
       unsigned int bytes2send = 0;
+      bool firstChar = true;
       if (rest > 0)
       {
         times++;
       }
       for (int i = 0; i < (times); i++)
       {
+        Watchdog.reset();
         if (i < (times - 1))
         {
           bytes2send = 1500;
@@ -414,16 +448,29 @@ bool enviar_datos(void)
         command.concat(String(bytes2send));
         command.concat(",");
         command.concat(eof);
-        if (comandoAT(command, ">"))
+        if (comandoAT(command, ">", 1))
         {
           mySerial.begin(9600);
           while ((dataFile.available()) && ((bytes2send != 0) && (largo != 0)))
           {
+            Watchdog.reset();
             largo--;
             bytes2send--;
             c = dataFile.read();
-            mySerial.print(c);
-            Serial.print(c);
+            if (firstChar)
+            {
+              firstChar = false;
+              if (c == '2')
+              {
+                mySerial.print(c);
+                Serial.print(c);
+              }
+            }
+            else
+            {
+              mySerial.print(c);
+              Serial.print(c);
+            }
           }
         }
         else
@@ -435,6 +482,7 @@ bool enviar_datos(void)
         respuesta = "";
         while ((respuesta.indexOf("OK") == -1) && (respuesta.indexOf("ERROR") == -1))
         {
+          Watchdog.reset();
           do
           {
             c = LF;
@@ -458,9 +506,9 @@ bool enviar_datos(void)
 //-----------------------------------------------------------------------------
 bool desconectar_telit(void)
 {
-  if (comandoAT("AT#FTPCLOSE", "OK"))
+  if (comandoAT("AT#FTPCLOSE", "OK", 10))
   {
-    if (comandoAT("AT#GPRS=0", "OK"));
+    if (comandoAT("AT#GPRS=0", "OK", 10));
     {
       return true;
     }
@@ -472,7 +520,7 @@ bool desconectar_telit(void)
 //el módulo GSM
 bool apagar_telit(void)
 {
-  if (comandoAT("AT+CFUN=0,0", "OK"))
+  if (comandoAT("AT+CFUN=0,0", "OK", 10))
   {
     return true;
   }
@@ -483,7 +531,7 @@ bool apagar_telit(void)
 //fechaYhora.
 void get_fecha_hora(void)
 {
-  if (comandoAT("AT+CCLK?", "OK"))
+  if (comandoAT("AT+CCLK?", "OK", 10))
   {
     fechaYhora = respuesta.substring(10, 29);
     return true;
@@ -496,15 +544,18 @@ void get_fecha_hora(void)
 void set_fecha_hora(void)
 {
   delay(1000);
+  respuesta = "";
   Serial.print("Configurar fecha/hora? <s/n>: ");
-  if (Serial.readStringUntil("s"))
+  respuesta = Serial.readStringUntil(CR);
+  if (respuesta.indexOf("s")!=-1)
   {
+    fechaYhora = "";
     Serial.println();
     Serial.setTimeout(20000);
     Serial.print("Introduzca la fecha y hora en formato <aaaa/mm/dd,hh:mm:ss>: ");
     fechaYhora = Serial.readStringUntil(CR);
     Serial.println();
-    comandoAT("AT+CCLK=\"" + fechaYhora + "+00\"", "OK");
+    comandoAT("AT+CCLK=\"" + fechaYhora + "+00\"", "OK", 10);
   }
   return;
 }
@@ -568,14 +619,14 @@ void set_alarma(void)
     strHora += strHora_temp;
   }
   delay(1000);
-  comandoAT("AT+CALA=\"" + strHora + ":" + strMinutos + ":00+00\",0,4,,\"0\",0", "OK");
+  comandoAT("AT+CALA=\"" + strHora + ":" + strMinutos + ":00+00\",0,4,,\"0\",0", "OK", 10);
   return;
 }
 
 //---------------------------------------------------------------------------------------
 void get_senial(void)
 {
-  if (comandoAT("AT+CSQ", "OK"))
+  if (comandoAT("AT+CSQ", "OK", 10))
   {
     int index = respuesta.indexOf(":");
     valorSenial = respuesta.substring(index + 2, index + 6);
@@ -586,9 +637,9 @@ void get_senial(void)
 //---------------------------------------------------------------------------------------
 bool enviar_sms(void)
 {
-  if (comandoAT("AT+CMGF=1", "OK"))
+  if (comandoAT("AT+CMGF=1", "OK", 1))
   {
-    if (comandoAT("AT+CMGS=\"3513420474\",129", ">"))
+    if (comandoAT("AT+CMGS=\"3513420474\",129", ">", 1))
     {
       String datos = ID;
       datos.concat("\r");
@@ -600,7 +651,7 @@ bool enviar_sms(void)
       datos.concat("\r");
       datos.concat(valorSenial);
       datos.concat(char(26));
-      if (comandoAT(datos, "+CMGS"))
+      if (comandoAT(datos, "+CMGS", 1))
       {
         return true;
       }
@@ -611,7 +662,7 @@ bool enviar_sms(void)
 //---------------------------------------------------------------------------------------
 bool borrar_sms(void)
 {
-  if (comandoAT("AT+CMGD=4", "OK"))
+  if (comandoAT("AT+CMGD=4", "OK", 1))
   {
     return true;
   }
@@ -622,6 +673,7 @@ bool borrar_sms(void)
 /*--------------------------------- SENSOR 4-20mA ------------------------------------*/
 void sensor_420ma(void)
 {
+  Watchdog.disable();
   digitalWrite(RELEpin, HIGH);
   delay(delaySensor * 1000);
   float valorSensorTemp = 0;
@@ -637,22 +689,27 @@ void sensor_420ma(void)
   valorSensorTemp = (valorSensorTemp * m) - b;
   valorSensor = valorSensorTemp;
   digitalWrite(RELEpin, LOW);
+  Watchdog.enable();
   return;
 }
 
 void calibrar_sensor(void)
 {
+  Watchdog.disable();
+  delay(1000);
+  respuesta = "";
   Serial.print("Calibrar sensor? <s/n>: ");
   respuesta = Serial.readStringUntil(CR);
   Serial.println();
   if (respuesta.indexOf("s") != -1)
   {
+    respuesta = "";
     Serial.println("Modo calibracion. Presione 'e' para salir");
     digitalWrite(RELEpin, HIGH);
     delay(delaySensor * 1000);
     while (respuesta.indexOf('e') == -1)
     {
-      delay(1000);
+      delay(500);
       switch (tipoSensor)
       {
         case 0: sensor_420ma();
@@ -671,6 +728,8 @@ void calibrar_sensor(void)
     }
     digitalWrite(RELEpin, LOW);
   }
+  Watchdog.enable();
+  Watchdog.reset();
   return;
 }
 /*-------------------------------- FIN SENSOR 4-20mA ---------------------------------*/
@@ -682,7 +741,7 @@ void sensor_SDI12(void)
   digitalWrite(RELEpin, HIGH);
   delay(delaySensor * 1000);
   mySDI12.begin();
-
+  Watchdog.reset();
   String sdiResponse = "";
   delay(1000);
   mySDI12.sendCommand("0M!");
@@ -730,6 +789,7 @@ void sensor_SDI12(void)
 /*-------------------------- FUNCIONES SENSOR LIMNIMÉTRICO OTT -----------------------*/
 void sensor_OTT(void)
 {
+  Watchdog.reset();
   x_final = 0;
   y_final = 0;
   int k = 32;
@@ -840,67 +900,84 @@ void sensor_bateria()
   }
   valorTension /= 32.0;
   valorTension = ((valorTension * 5.0) / 1023.0) + 10.0 + 0.7;
-  //  Serial.print("Nivel de bateria: ");
-  //  Serial.print(valorTension);
-  //  Serial.println(" V");
   return;
 }
 /*------------------------------ FIN TENSIÓN BATERÍA ---------------------------------*/
 
-/*------------------------------------------------------------------------------------*/
-void imprimir_datos()
-{
-  Serial.println(ID + ": " +
-                 fechaYhora + "," +
-                 valorSensor + "," +
-                 valorTension + "," +
-                 valorSenial);
-  return;
-}
-/*------------------------------------------------------------------------------------*/
-
 
 /*----------------------------- FUNCIONES TARJETA SD ---------------------------------*/
-void guardar_datos()
+bool iniciar_SD()
 {
-  File dataFile;
-
-  dataFile = SD.open("datosD.txt", FILE_WRITE);
-  if (dataFile)
+  Watchdog.reset();
+  if (SD.begin(SDCSpin))
   {
-    dataFile.print(fechaYhora.substring(0, 16));
-    dataFile.print(",");
-    dataFile.print(String(valorSensor));
-    dataFile.print(",");
-    dataFile.print(String(valorTension));
-    dataFile.print(",");
-    dataFile.print(valorSenial);
-    dataFile.print("\r\n");
+    dataFile = SD.open("datosL", FILE_WRITE);
+    if (!dataFile)
+    {
+      Serial.println("error en datosL");
+    }
+    dataFile.close();
+    dataFile = SD.open("datosD", FILE_WRITE);
+    if (!dataFile)
+    {
+      Serial.println("error en datosD");
+    }
     dataFile.close();
   }
-  //  else
-  //  {
-  //    Serial.println("error opening datosD.txt");
-  //  }
-
-  dataFile = SD.open("datosL.txt", FILE_WRITE);
-  if (dataFile)
+  else
   {
-    dataFile.print(fechaYhora.substring(0, 16));
-    dataFile.print(",");
-    dataFile.print(String(valorSensor));
-    dataFile.print(",");
-    dataFile.print(String(valorTension));
-    dataFile.print(",");
-    dataFile.print(valorSenial);
-    dataFile.print("\r\n");
-    dataFile.close();
+    Serial.println("error en SD");
   }
-  //  else
-  //  {
-  //    Serial.println("error opening datosL.txt");
-  //  }
   return;
+}
+
+bool terminar_SD()
+{
+  Watchdog.reset();
+  SD.end();
+  return;
+}
+bool guardar_datos()
+{
+  Watchdog.reset();
+  bool flag = false;
+  dataFile = SD.open("datosL", FILE_WRITE);
+  if (dataFile)
+  {
+    dataFile.print(fechaYhora.substring(0, 16));
+    dataFile.print(",");
+    dataFile.print(String(valorSensor));
+    dataFile.print(",");
+    dataFile.print(String(valorTension));
+    dataFile.print(",");
+    dataFile.print(valorSenial);
+    dataFile.print("\r\n");
+  }
+  else
+  {
+    //Serial.println("error abriendo datosL");
+  }
+  dataFile.close();
+  Watchdog.reset();
+  dataFile = SD.open("datosD", FILE_WRITE);
+  if (dataFile)
+  {
+    dataFile.print(fechaYhora.substring(0, 16));
+    dataFile.print(",");
+    dataFile.print(String(valorSensor));
+    dataFile.print(",");
+    dataFile.print(String(valorTension));
+    dataFile.print(",");
+    dataFile.print(valorSenial);
+    dataFile.print("\r\n");
+    flag = true;
+  }
+  else
+  {
+    //Serial.println("error abriendo datosD");
+  }
+  dataFile.close();
+  return flag;
 }
 /*--------------------------- FIN FUNCIONES TARJETA SD -------------------------------*/
 

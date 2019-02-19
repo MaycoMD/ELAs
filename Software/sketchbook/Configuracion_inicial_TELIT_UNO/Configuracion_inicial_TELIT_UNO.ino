@@ -20,7 +20,7 @@ byte tipoSensor = 1;                  // tipo de sensor a utilizar (0~3)
 byte delaySensor = 5;                // pre-calentamiento del sensor (en segundos)
 float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
 byte frecuencia = 10;                 // frecuencia de transmisión de los datos (en minutos)
-String ID = "ELF00";                  // Identificador de la estación
+String ID = "ELA00";                  // Identificador de la estación
 byte maxDatos = 6;                   // Cantidad máxima de datos a almacenar
 byte contDatos = 0;
 int valorSensor;
@@ -84,8 +84,10 @@ void loop()
   comandoAT("AT+CFUN=1", "OK");
   comandoAT("AT&K0", "OK");
   comandoAT("ATV1", "OK");
+  //comandoAT("ATQ1","OK");
+  comandoAT("AT#MWI=0");
   comandoAT("AT+CSDF=1,2", "OK");
-  comandoAT("AT+CCLK=\"2019/02/13,14:09:00+00\"","OK");
+  comandoAT("AT+CCLK=\"2019/02/18,13:16:00+00\"", "OK");
   comandoAT("AT#USERID=\"gprs\"", "OK");
   comandoAT("AT#PASSW=\"gprs\"", "OK");
   comandoAT("AT+CGDCONT=1,\"IP\",\"gprs.personal.com\"", "OK");
@@ -94,15 +96,27 @@ void loop()
   comandoAT("AT&P0", "OK");
   comandoAT("AT&W0", "OK");
   comandoAT("AT+CSQ", "OK");
-  comandoAT("AT#GPRS=1", "OK");
-  comandoAT("AT#FTPTO=5000", "OK");
-  comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK");
-  comandoAT("AT#FTPTYPE=1", "OK");
-  comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK");
-  comandoAT("AT#FTPAPPEXT=21,1", ">");
-  comandoAT("Transmision de prueba", "OK");
-  comandoAT("AT#FTPCLOSE", "OK");
-  comandoAT("AT#GPRS=0", "OK");
+  if (comandoAT("AT#GPRS=1", "OK"))
+  {
+    if (comandoAT("AT#FTPTO=5000", "OK"))
+    {
+      if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK"))
+      {
+        if (comandoAT("AT#FTPTYPE=1", "OK"))
+        {
+          if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK"))
+          {
+            if (comandoAT("AT#FTPAPPEXT=21,1", ">"))
+            {
+              comandoAT("Transmision de prueba", "OK");
+            }
+          }
+        }
+        comandoAT("AT#FTPCLOSE", "OK");
+      }
+    }
+    comandoAT("AT#GPRS=0", "OK");
+  }
   comandoAT("AT#SYSHALT", "OK");
   while (1) {}
 }
@@ -129,27 +143,22 @@ bool comandoAT(String comando, char resp[3])
     {
       do
       {
-        c = LF;
+        c = CR;
         if (mySerial.available())
         {
           c = mySerial.read();
           respuesta += c;
         }
       }
-      while (c != LF);
+      while (c != CR);
     }
     if (respuesta.indexOf("ERROR") != -1)
     {
-      Serial.println(" -> ERROR");
-    }
-    else if (respuesta.indexOf(resp) == -1)
-    {
-      Serial.println(" -> TIMEOUT!");
+      Serial.println(respuesta);
     }
   }
   if (contador != 0)
   {
-    Serial.println(" -> OK");
     Serial.println(respuesta);
     return true;
   }
