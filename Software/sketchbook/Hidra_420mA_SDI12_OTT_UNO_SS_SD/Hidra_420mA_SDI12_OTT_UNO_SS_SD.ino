@@ -188,10 +188,16 @@ void loop()
       guardar_datos_l();
       if (conexion_gprs())
       {
-        if (conexion_ftp())
+        if (iniciar_SD())
         {
-          enviar_datos_sd();
-          desconexion_ftp();
+          if (SD.exists("datosD"))
+          {
+            if (conexion_ftp())
+            {
+              enviar_datos_sd();
+              desconexion_ftp();
+            }
+          }
         }
         if (conexion_ftp())
         {
