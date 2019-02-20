@@ -125,22 +125,14 @@ void setup()
   sensor_bateria();
   if (reset_telit())
   {
-    if (iniciar_SD())
-    {
-      get_fecha_hora();
-      //set_fecha_hora();
-      set_alarma();
-      get_senial();
-      if (guardar_datos())
-      {
-        enviar_sms();
-        SD.remove("datosD");
-      }
-      borrar_sms();
-    }
-    terminar_SD();
+    get_fecha_hora();
+    //set_fecha_hora();
+    set_alarma();
+    get_senial();
+    enviar_sms();
+    borrar_sms();
+    apagar_telit();
   }
-  apagar_telit();
 
   if (tipoSensor == 2)
   {
@@ -193,52 +185,31 @@ void loop()
         default: break;
       }
       get_senial();
-
-      //      if(conectar_telit())
-      //      {
-      //        if(enviar_datos())
-      //        {
-      //          if(iniciar_SD())
-      //          {
-      //            if(SD.exists("datosD"))
-      //            {
-      //              if(enviar_datos_sd())
-      //              {
-      //                SD.remove("datosD");
-      //              }
-      //            }
-      //          }
-      //          terminar_SD();
-      //        }
-      //        else
-      //        {
-      //          if(iniciar_SD())
-      //          {
-      //            guardar_datos();
-      //          }
-      //          terminar_SD();
-      //        }
-      //      }
-
-      if (iniciar_SD())
+      guardar_datos_l();
+      if (conexion_gprs())
       {
-        if (guardar_datos())
+        if (conexion_ftp())
         {
-          if (conectar_telit())
-          {
-            if (enviar_datos_sd())
-            {
-              SD.remove("datosD");
-            }
-            if (!desconectar_telit())
-            {
-              reset_telit();
-              get_fecha_hora();
-              set_alarma();
-            }
-          }
+          enviar_datos_sd();
+          desconexion_ftp();
         }
-        terminar_SD();
+        if (conexion_ftp())
+        {
+          if (!enviar_datos())
+          {
+            guardar_datos_d();
+          }
+          desconexion_ftp();
+        }
+        else
+        {
+          guardar_datos_d();
+        }
+        desconexion_gprs();
+      }
+      else
+      {
+        guardar_datos_d();
       }
       apagar_telit();
       interrupcion = false;
@@ -257,7 +228,7 @@ void loop()
 /*---------------------------- FIN PROGRAMA PRINCIPAL --------------------------------*/
 
 
-/*--------------------------- INTERRUPCIONES -------------------------------------*/
+/*------------------------------- INTERRUPCIONES -------------------------------------*/
 // Rutina de interrupción por la alarma programada en el RTC del módulo Telit
 void RTCint()
 {
@@ -340,7 +311,7 @@ bool comandoAT(String comando, char resp[3], byte contador)
     return false;
   }
 }
-//-----------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 //Despierta al módulo GSM/GPRS mediante el pin de reset y envía el
 //comando AT para verificar que está funcionando normalmente.
 bool reset_telit(void)
@@ -363,8 +334,8 @@ bool reset_telit(void)
   }
   return false;
 }
-//----------------------------------------------------------------------------
-bool conectar_telit(void)
+//---------------------------------------------------------------------------------------
+bool conexion_gprs(void)
 {
   if (comandoAT("AT#GPRS=0", "OK", 10))
   {
@@ -373,148 +344,167 @@ bool conectar_telit(void)
     {
       Watchdog.enable(8000);
       Watchdog.reset();
-      if (comandoAT("AT#FTPTO=5000", "OK", 10))
-      {
-        if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10)) // 0->Active Mode, 1->Passive Mode
-        {
-          if (comandoAT("AT#FTPTYPE=1", "OK", 10)) // 0->Binary, 1->ASCII
-          {
-            if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
-            {
-              return true;
-            }
-          }
-        }
-      }
+      return true;
     }
   }
   return false;
 }
 //---------------------------------------------------------------------------------------
-//bool enviar_datos(void)
-//{
-//  String datos;
-//  String largo = String(datos.length());
-//
-//  if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK",1))
-//  {
-//    if (comandoAT("AT#FTPAPPEXT=" + largo + ",1", ">",1))
-//    {
-//      if (comandoAT(datos, "OK",1))
-//      {
-//        return true;
-//      }
-//    }
-//  }
-//  return false;
-//}
-//---------------------------------------------------------------------------------------
-bool enviar_datos_sd(void)
+bool conexion_ftp()
 {
-  Watchdog.reset();
-  if (SD.exists("datosD"))
+  if (comandoAT("AT#FTPTO=5000", "OK", 10))
   {
-    dataFile = SD.open("datosD", FILE_READ);
-    char c;
-    if (dataFile)
+    if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10)) // 0->Active Mode, 1->Passive Mode
     {
-      unsigned long largo = dataFile.size();
-      unsigned int times = (largo / 1500);
-      unsigned int rest = largo % 1500;
-      unsigned int bytes2send = 0;
-      bool firstChar = true;
-      if (rest > 0)
+      if (comandoAT("AT#FTPTYPE=1", "OK", 10)) // 0->Binary, 1->ASCII
       {
-        times++;
+        if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
+        {
+          return true;
+        }
       }
-      for (int i = 0; i < (times); i++)
-      {
-        if (i < (times - 1))
-        {
-          bytes2send = 1500;
-        }
-        else
-        {
-          bytes2send = largo;
-        }
-
-        bool eof = (i == (times - 1));
-        String command = ("AT#FTPAPPEXT=");
-        command.concat(String(bytes2send));
-        command.concat(",");
-        command.concat(eof);
-        while (mySerial.available() > 0)
-        {
-          char basura = mySerial.read();
-        }
-        if (comandoAT(command, ">", 1))
-        {
-          mySerial.begin(9600);
-          while ((dataFile.available()) && ((bytes2send != 0) && (largo != 0)))
-          {
-            Watchdog.reset();
-            largo--;
-            bytes2send--;
-            c = dataFile.read();
-            if (firstChar)
-            {
-              firstChar = false;
-              if (c == '2')
-              {
-                mySerial.print(c);
-                Serial.print(c);
-              }
-            }
-            else
-            {
-              mySerial.print(c);
-              Serial.print(c);
-            }
-          }
-        }
-        else
-        {
-          dataFile.close();
-          return false;
-        }
-        // verifica la respuesta del Telit al terminar de escribir en el archivo remoto
-        respuesta = "";
-        while ((respuesta.indexOf("OK") == -1) && (respuesta.indexOf("ERROR") == -1))
-        {
-          Watchdog.reset();
-          do
-          {
-            c = LF;
-            if (mySerial.available())
-            {
-              c = mySerial.read();
-              respuesta += c;
-            }
-          }
-          while (c != LF);
-        }
-        Serial.println(respuesta);
-      }
-      mySerial.end();
     }
-    dataFile.close();
-    return true;
   }
   return false;
 }
-//-----------------------------------------------------------------------------
-bool desconectar_telit(void)
+//---------------------------------------------------------------------------------------
+bool enviar_datos(void)
 {
-  if (comandoAT("AT#FTPCLOSE", "OK", 10))
+  String datos;
+  datos.concat(fechaYhora.substring(0, 16));
+  datos.concat(",");
+  datos.concat(valorSensor);
+  datos.concat(",");
+  datos.concat(valorTension);
+  datos.concat(",");
+  datos.concat(valorSenial);
+  datos.concat("\r");
+  String largo = String(datos.length());
+
+  if (comandoAT("AT#FTPAPPEXT=" + largo + ",1", ">", 1))
   {
-    if (comandoAT("AT#GPRS=0", "OK", 10));
+    if (comandoAT(datos, "OK", 1))
     {
       return true;
     }
   }
   return false;
 }
-//-----------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+bool enviar_datos_sd(void)
+{
+  if (iniciar_SD())
+  {
+    if (SD.exists("datosD"))
+    {
+      dataFile = SD.open("datosD", FILE_READ);
+      char c;
+      if (dataFile)
+      {
+        unsigned long largo = dataFile.size();
+        unsigned int times = (largo / 1500);
+        unsigned int rest = largo % 1500;
+        unsigned int bytes2send = 0;
+        bool firstChar = true;
+        if (rest > 0)
+        {
+          times++;
+        }
+        for (int i = 0; i < (times); i++)
+        {
+          if (i < (times - 1))
+          {
+            bytes2send = 1500;
+          }
+          else
+          {
+            bytes2send = largo;
+          }
+
+          bool eof = (i == (times - 1));
+          String command = ("AT#FTPAPPEXT=");
+          command.concat(String(bytes2send));
+          command.concat(",");
+          command.concat(eof);
+          while (mySerial.available() > 0)
+          {
+            char basura = mySerial.read();
+          }
+          if (comandoAT(command, ">", 1))
+          {
+            mySerial.begin(9600);
+            while ((dataFile.available()) && ((bytes2send != 0) && (largo != 0)))
+            {
+              largo--;
+              bytes2send--;
+              c = dataFile.read();
+              if (firstChar)
+              {
+                firstChar = false;
+                if (c == '2')
+                {
+                  mySerial.print(c);
+                  Serial.print(c);
+                }
+              }
+              else
+              {
+                mySerial.print(c);
+                Serial.print(c);
+              }
+            }
+          }
+          else
+          {
+            dataFile.close();
+            return false;
+          }
+          // verifica la respuesta del Telit al terminar de escribir en el archivo remoto
+          respuesta = "";
+          while ((respuesta.indexOf("OK") == -1) && (respuesta.indexOf("ERROR") == -1))
+          {
+            do
+            {
+              c = LF;
+              if (mySerial.available())
+              {
+                c = mySerial.read();
+                respuesta += c;
+              }
+            }
+            while (c != LF);
+          }
+          Serial.println(respuesta);
+        }
+        mySerial.end();
+      }
+      SD.remove("datosD");
+      dataFile.close();
+      return true;
+    }
+    terminar_SD();
+  }
+  return false;
+}
+//---------------------------------------------------------------------------------------
+bool desconexion_gprs(void)
+{
+  if (comandoAT("AT#GPRS=0", "OK", 10));
+  {
+    return true;
+  }
+  return false;
+}
+//---------------------------------------------------------------------------------------
+bool desconexion_ftp()
+{
+  if (comandoAT("AT#FTPCLOSE", "OK", 10))
+  {
+    return true;
+  }
+  return false;
+}
+//---------------------------------------------------------------------------------------
 //transmite vía comunicación serie (UART) el comando AT adecuado para apagar
 //el módulo GSM
 bool apagar_telit(void)
@@ -525,7 +515,7 @@ bool apagar_telit(void)
   }
   return false;
 }
-//-----------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 //Obtiene la fecha y hora actual del RTC del TELIT y lo guarda en el string
 //fechaYhora.
 void get_fecha_hora(void)
@@ -537,7 +527,7 @@ void get_fecha_hora(void)
   }
   return false;
 }
-//-----------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 //Establece el valor de fecha y hora ingresado por el usuario en el menú USB
 //y setea dicho valor en el RTC del módulo TELIT
 void set_fecha_hora(void)
@@ -558,7 +548,7 @@ void set_fecha_hora(void)
   }
   return;
 }
-//-----------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 //Función que setea la alarma del RTC automáticamente en caso de que el
 //sistema se quede sin batería y se deje de posponer la alarma anterior. Esta
 //rutina pregunta la hora actual del RTC del TELIT y calcula de acuerdo a la
@@ -905,6 +895,64 @@ void sensor_bateria()
 
 
 /*----------------------------- FUNCIONES TARJETA SD ---------------------------------*/
+bool guardar_datos_l()
+{
+  Watchdog.reset();
+  bool flag = false;
+  if (iniciar_SD())
+  {
+    dataFile = SD.open("datosL", FILE_WRITE);
+    if (dataFile)
+    {
+      dataFile.print(fechaYhora.substring(0, 16));
+      dataFile.print(",");
+      dataFile.print(String(valorSensor));
+      dataFile.print(",");
+      dataFile.print(String(valorTension));
+      dataFile.print(",");
+      dataFile.print(valorSenial);
+      dataFile.print("\r\n");
+      flag = true;
+    }
+    else
+    {
+      //Serial.println("error abriendo datosL");
+    }
+    dataFile.close();
+  }
+  terminar_SD();
+  return flag;
+}
+//--------------------------------------------------------------------------------------
+bool guardar_datos_d()
+{
+  Watchdog.reset();
+  bool flag = false;
+  if (iniciar_SD())
+  {
+    dataFile = SD.open("datosD", FILE_WRITE);
+    if (dataFile)
+    {
+      dataFile.print(fechaYhora.substring(0, 16));
+      dataFile.print(",");
+      dataFile.print(String(valorSensor));
+      dataFile.print(",");
+      dataFile.print(String(valorTension));
+      dataFile.print(",");
+      dataFile.print(valorSenial);
+      dataFile.print("\r\n");
+      flag = true;
+    }
+    else
+    {
+      //Serial.println("error abriendo datosD");
+    }
+    dataFile.close();
+  }
+  terminar_SD();
+  return flag;
+}
+//---------------------------------------------------------------------------------------
 bool iniciar_SD()
 {
   Watchdog.reset();
@@ -929,54 +977,12 @@ bool iniciar_SD()
   }
   return;
 }
-
+//---------------------------------------------------------------------------------------
 bool terminar_SD()
 {
   Watchdog.reset();
   SD.end();
   return;
-}
-bool guardar_datos()
-{
-  Watchdog.reset();
-  bool flag = false;
-  dataFile = SD.open("datosL", FILE_WRITE);
-  if (dataFile)
-  {
-    dataFile.print(fechaYhora.substring(0, 16));
-    dataFile.print(",");
-    dataFile.print(String(valorSensor));
-    dataFile.print(",");
-    dataFile.print(String(valorTension));
-    dataFile.print(",");
-    dataFile.print(valorSenial);
-    dataFile.print("\r\n");
-  }
-  else
-  {
-    //Serial.println("error abriendo datosL");
-  }
-  dataFile.close();
-  Watchdog.reset();
-  dataFile = SD.open("datosD", FILE_WRITE);
-  if (dataFile)
-  {
-    dataFile.print(fechaYhora.substring(0, 16));
-    dataFile.print(",");
-    dataFile.print(String(valorSensor));
-    dataFile.print(",");
-    dataFile.print(String(valorTension));
-    dataFile.print(",");
-    dataFile.print(valorSenial);
-    dataFile.print("\r\n");
-    flag = true;
-  }
-  else
-  {
-    //Serial.println("error abriendo datosD");
-  }
-  dataFile.close();
-  return flag;
 }
 /*--------------------------- FIN FUNCIONES TARJETA SD -------------------------------*/
 
