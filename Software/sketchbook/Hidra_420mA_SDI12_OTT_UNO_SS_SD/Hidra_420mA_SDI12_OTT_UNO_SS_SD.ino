@@ -1,10 +1,10 @@
-//#include "TimerOne.h"
 #include <Adafruit_SleepyDog.h>
 #include <avr/sleep.h>
 #include "SoftwareSerialMod.h"
 #include "SDI12Mod.h"
 #include <SPI.h>
 #include <SD.h>
+#include <EEPROM.h>
 
 #define VBATpin A0
 #define RELEpin A1
@@ -22,7 +22,7 @@
 #define PWRMONpin 11
 #define LEDpin 13
 
-//MAPEO DE PINES:
+//MAPEO DE PINES DIGITALES:
 // 0 -> Hardware Rx
 // 1 -> Hardware Tx
 // 2 -> Rain pin (Arduino reset interrupt)
@@ -38,9 +38,18 @@
 // 12 -> SD_MISO
 // 13 -> SD_CLK
 // 14 -> GND
+// A1 -> RELEpin
+// A5 -> SDI12pin
 
-#define tipoSensor 1                  // tipo de sensor a utilizar (0~3)
-#define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
+//MAPEO DE PINES ANALÓGICOS:
+// A0 -> VBATpin
+// A2 -> s420
+// A3 -> OTTa
+// A4 -> OTTb
+
+
+#define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
+#define delaySensor 90                 // pre-calentamiento del sensor (en segundos)
 #define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
@@ -65,8 +74,9 @@ int valorSensor;
 float valorTension = 0;
 String fechaYhora;
 String valorSenial;
-volatile bool interrupcion = false;
-volatile bool timerInt = false;
+volatile bool rtcFlag = false;
+volatile bool timerFlag = false;
+volatile bool smsFlag = false;
 String respuesta = "";
 File dataFile;
 
@@ -87,8 +97,10 @@ void setup()
   Serial.begin(9600);
   while (!Serial) {}
   Serial.setTimeout(10000); //tiempo en milisegundos
+
   Watchdog.enable(8000);
   Watchdog.reset();
+
   pinMode(VBATpin, INPUT);
   pinMode(s420, INPUT);
   pinMode(SMSRCVpin, INPUT);
@@ -110,6 +122,7 @@ void setup()
 
   attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
   interrupts();
+
   iniciar_SD();
   terminar_SD();
   //calibrar_sensor();
@@ -129,7 +142,12 @@ void setup()
     //set_fecha_hora();
     set_alarma();
     get_senial();
-    enviar_sms();
+    leer_sms();
+    if (smsFlag)
+    {
+      enviar_sms();
+      smsFlag = false;
+    }
     borrar_sms();
     apagar_telit();
   }
@@ -163,7 +181,7 @@ void loop()
     sensor_OTT();
   }
 
-  if (interrupcion == true)
+  if (rtcFlag == true)
   {
     interrupts();
     delay(2000);
@@ -186,43 +204,33 @@ void loop()
       }
       get_senial();
       guardar_datos_l();
+      bool datosFlag = false;
+      if (guardar_datos_d())
+      {
+        datosFlag = true;
+      }
       if (conexion_gprs())
       {
-        if (iniciar_SD())
-        {
-          if (SD.exists("datosD"))
-          {
-            if (conexion_ftp())
-            {
-              enviar_datos_sd();
-              desconexion_ftp();
-            }
-          }
-        }
         if (conexion_ftp())
         {
-          if (!enviar_datos())
+          if (datosFlag)
           {
-            guardar_datos_d();
+            enviar_datos_sd();
+          }
+          else
+          {
+            enviar_datos();
           }
           desconexion_ftp();
         }
-        else
-        {
-          guardar_datos_d();
-        }
         desconexion_gprs();
       }
-      else
-      {
-        guardar_datos_d();
-      }
       apagar_telit();
-      interrupcion = false;
+      rtcFlag = false;
     }
     else
     {
-      interrupcion = false;
+      rtcFlag = false;
     }
     if (tipoSensor == 2)
     {
@@ -244,7 +252,7 @@ void RTCint()
   delayMicroseconds(10000);
   if (digitalRead(RTCpin) == LOW)
   {
-    interrupcion = true;
+    rtcFlag = true;
   }
   interrupts();
   return;
@@ -290,6 +298,7 @@ bool comandoAT(String comando, char resp[3], byte contador)
     mySerial.println(comando);
     Serial.print(comando);
     Watchdog.reset();
+    timerFlag = false;
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
       do
@@ -348,6 +357,7 @@ bool conexion_gprs(void)
     Watchdog.disable();
     if (comandoAT("AT#GPRS=1", "OK", 10))
     {
+      Watchdog.reset();
       Watchdog.enable(8000);
       Watchdog.reset();
       return true;
@@ -618,7 +628,7 @@ void set_alarma(void)
   return;
 }
 
-//---------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
 void get_senial(void)
 {
   if (comandoAT("AT+CSQ", "OK", 10))
@@ -629,7 +639,24 @@ void get_senial(void)
   }
   return false;
 }
-//---------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
+bool leer_sms()
+{
+  comandoAT("AT+CSDH=0","OK",10);
+  if(comandoAT("AT+CMGL=0","OK",10))
+  {
+    if(respuesta.length()>10)
+    {
+      smsFlag = true;
+    }
+    else
+    {
+      smsFlag = false;
+    }
+  }
+  return;
+}
+//--------------------------------------------------------------------------------------
 bool enviar_sms(void)
 {
   if (comandoAT("AT+CMGF=1", "OK", 1))
@@ -654,7 +681,7 @@ bool enviar_sms(void)
   }
   return false;
 }
-//---------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
 bool borrar_sms(void)
 {
   if (comandoAT("AT+CMGD=4", "OK", 1))
@@ -669,6 +696,7 @@ bool borrar_sms(void)
 void sensor_420ma(void)
 {
   Watchdog.disable();
+  //Timer1.stop();
   digitalWrite(RELEpin, HIGH);
   delay(delaySensor * 1000);
   float valorSensorTemp = 0;
@@ -685,12 +713,14 @@ void sensor_420ma(void)
   valorSensor = valorSensorTemp;
   digitalWrite(RELEpin, LOW);
   Watchdog.enable(8000);
+  //Timer1.restart();
   return;
 }
 
 void calibrar_sensor(void)
 {
   Watchdog.disable();
+  //Timer1.stop();
   delay(1000);
   respuesta = "";
   Serial.print("Calibrar sensor? <s/n>: ");
@@ -725,6 +755,7 @@ void calibrar_sensor(void)
   }
   Watchdog.enable(8000);
   Watchdog.reset();
+  //Timer1.restart();
   return;
 }
 /*-------------------------------- FIN SENSOR 4-20mA ---------------------------------*/
@@ -737,6 +768,7 @@ void sensor_SDI12(void)
   delay(delaySensor * 1000);
   mySDI12.begin();
   Watchdog.reset();
+  //Timer1.restart();
   String sdiResponse = "";
   delay(1000);
   mySDI12.sendCommand("0M!");
@@ -785,6 +817,7 @@ void sensor_SDI12(void)
 void sensor_OTT(void)
 {
   Watchdog.reset();
+  //Timer1.restart();
   x_final = 0;
   y_final = 0;
   int k = 32;
@@ -904,6 +937,7 @@ void sensor_bateria()
 bool guardar_datos_l()
 {
   Watchdog.reset();
+  //Timer1.restart();
   bool flag = false;
   if (iniciar_SD())
   {
@@ -933,6 +967,7 @@ bool guardar_datos_l()
 bool guardar_datos_d()
 {
   Watchdog.reset();
+  //Timer1.restart();
   bool flag = false;
   if (iniciar_SD())
   {
@@ -962,6 +997,7 @@ bool guardar_datos_d()
 bool iniciar_SD()
 {
   Watchdog.reset();
+  //Timer1.restart();
   if (SD.begin(SDCSpin))
   {
     dataFile = SD.open("datosL", FILE_WRITE);
@@ -987,6 +1023,7 @@ bool iniciar_SD()
 bool terminar_SD()
 {
   Watchdog.reset();
+  //Timer1.restart();
   SD.end();
   return;
 }
