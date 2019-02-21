@@ -50,7 +50,7 @@
 
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
 #define delaySensor 90                 // pre-calentamiento del sensor (en segundos)
-#define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
+#define frecuencia 10                 // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -633,8 +633,9 @@ void get_senial(void)
 {
   if (comandoAT("AT+CSQ", "OK", 10))
   {
-    int index = respuesta.indexOf(":");
-    valorSenial = respuesta.substring(index + 2, index + 6);
+    int index1 = respuesta.indexOf(":");
+    int index2 = respuesta.indexOf(",");
+    valorSenial = respuesta.substring(index1 + 2, index2 + 2);
     return true;
   }
   return false;
