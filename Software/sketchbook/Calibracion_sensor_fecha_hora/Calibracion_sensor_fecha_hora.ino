@@ -101,17 +101,10 @@ void setup()
   digitalWrite(RELEpin, LOW);
   digitalWrite(LEDpin, LOW);
 
-  digitalWrite(RELEpin, HIGH);
-
-  calibrar_sensor();
-
-  switch (tipoSensor)
+  if (encender_sensor())
   {
-    case 0: sensor_420ma();
-      break;
-    case 1: sensor_SDI12();
-      break;
-    default: break;
+    calibrar_sensor();
+    digitalWrite(RELEpin, LOW);
   }
 
   Serial.println("Reiniciando Telit");
@@ -131,143 +124,25 @@ void loop()
 {
 
 }
-/*---------------------------- FIN PROGRAMA PRINCIPAL --------------------------------*/
-
-
-/*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
-
-bool comandoAT(String comando, char resp[3], byte contador)
-{
-  mySerial.begin(9600);
-  char c;
-  respuesta = "ERROR";
-
-  while (mySerial.available() > 0)
-  {
-    char basura = mySerial.read();
-  }
-
-  while ((respuesta.indexOf(resp) == -1) && (contador != 0))
-  {
-    delay(2000);
-    respuesta = "";
-    contador--;
-    mySerial.flush();
-    //mySerial.print('\b');
-    mySerial.println(comando);
-    Serial.print(comando);
-    while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
-    {
-      do
-      {
-        c = LF;
-        if (mySerial.available())
-        {
-          c = mySerial.read();
-          respuesta += c;
-        }
-      }
-      while (c != LF);
-    }
-    Serial.println(respuesta);
-  }
-  mySerial.flush();
-  mySerial.end();
-  Serial.flush();
-  if (respuesta.indexOf(resp) != -1)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-//-----------------------------------------------------------------------------
-//Despierta al módulo GSM/GPRS mediante el pin de reset y envía el
-//comando AT para verificar que está funcionando normalmente.
-bool reset_telit(void)
-{
-  digitalWrite(RSTpin, HIGH);
-  delay(220);
-  digitalWrite(RSTpin, LOW);
-  delay(5000);
-  if (comandoAT("AT", "OK", 10))
-  {
-    if (comandoAT("AT+CFUN=1", "OK", 10))
-    {
-      if (comandoAT("AT+CSDF=1,2", "OK", 10))
-      {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-//-----------------------------------------------------------------------------
-//transmite vía comunicación serie (UART) el comando AT adecuado para apagar
-//el módulo GSM
-bool apagar_telit(void)
-{
-  if (comandoAT("AT#SYSHALT", "OK", 10))
-  {
-    return true;
-  }
-  return false;
-}
-//-----------------------------------------------------------------------------
-//Obtiene la fecha y hora actual del RTC del TELIT y lo guarda en el string
-//fechaYhora.
-void get_fecha_hora(void)
-{
-  if (comandoAT("AT+CCLK?", "OK", 10))
-  {
-    fechaYhora = respuesta.substring(10, 29);
-    return true;
-  }
-  return false;
-}
-//-----------------------------------------------------------------------------
-//Establece el valor de fecha y hora ingresado por el usuario en el menú USB
-//y setea dicho valor en el RTC del módulo TELIT
-void set_fecha_hora(void)
+//---------------------------------------------------------------------------------------
+bool encender_sensor()
 {
   delay(1000);
   respuesta = "";
-  Serial.print("Configurar fecha/hora? <s/n>: ");
+  Serial.print("Encender sensor? <s/n>: ");
   respuesta = Serial.readStringUntil(CR);
+  Serial.println();
   if (respuesta.indexOf("s") != -1)
   {
-    fechaYhora = "";
-    Serial.println();
-    Serial.setTimeout(20000);
-    Serial.print("Introduzca la fecha y hora en formato <aaaa/mm/dd,hh:mm:ss>: ");
-    fechaYhora = Serial.readStringUntil(CR);
-    Serial.println();
-    comandoAT("AT+CCLK=\"" + fechaYhora + "+00\"", "OK", 10);
+    respuesta = "";
+    digitalWrite(RELEpin, HIGH);
+    delay(delaySensor * 1000);
+    Serial.println("Sensor encendido");
+    return true;
   }
-  return;
+  return false;
 }
-/*------------------------ FIN FUNCIONES CONTROL MÓDULO TELIT ------------------------*/
-
-/*--------------------------------- SENSOR 4-20mA ------------------------------------*/
-void sensor_420ma(void)
-{
-  float valorSensorTemp = 0;
-  int valorSensorInt = 0;
-  float m = valorMax / 820.0;
-  float b = (203.0 * valorMax) / 820.0;
-  for (byte i = 0; i < 32; i++)
-  {
-    valorSensorTemp += analogRead(s420);
-    delay(10);
-  }
-  valorSensorTemp /= 32.0;
-  valorSensorTemp = (valorSensorTemp * m) - b;
-  valorSensor = valorSensorTemp;
-  return;
-}
-
+//---------------------------------------------------------------------------------------
 void calibrar_sensor(void)
 {
   delay(1000);
@@ -278,15 +153,16 @@ void calibrar_sensor(void)
   if (respuesta.indexOf("s") != -1)
   {
     respuesta = "";
+    if (tipoSensor == 0)
+    {
+      sensor_420ma();
+    }
     Serial.println("Modo calibracion. Presione 'e' para salir");
-    delay(delaySensor * 1000);
     while (respuesta.indexOf('e') == -1)
     {
       delay(500);
       switch (tipoSensor)
       {
-        case 0: sensor_420ma();
-          break;
         case 1: sensor_SDI12();
           break;
         case 2: sensor_OTT();
@@ -300,6 +176,42 @@ void calibrar_sensor(void)
       }
     }
   }
+  return;
+}
+/*---------------------------- FIN PROGRAMA PRINCIPAL --------------------------------*/
+
+
+/*--------------------------------- SENSOR 4-20mA ------------------------------------*/
+void sensor_420ma(void)
+{
+  float valorSensorTemp = 0.0;
+  float valorSensorMin = 0.0;
+  float valorSensorMax = 0.0;
+  float m = 0.0;
+  float b = 0.0;
+  Serial.println("Coloque el sensor en el valor mínimo");
+  for (int i = 0; i < 64; i++)
+  {
+    valorSensorTemp += analogRead(s420);
+    delay(10);
+  }
+  valorSensorMin = valorSensorTemp / 64.0;
+  Serial.println(valorSensorMin);
+
+  Serial.println("Coloque el sensor en el valor máximo");
+  for (int i = 0; i < 64; i++)
+  {
+    valorSensorTemp += analogRead(s420);
+    delay(10);
+  }
+  valorSensorMax = valorSensorTemp / 64.0;
+  Serial.println(valorSensorMax);
+
+  m = (valorMax - 0.0) / (valorSensorMax - valorSensorMin);
+  Serial.println(m);
+  b = (203.0 * valorSensorMax) / (valorSensorMax - valorSensorMin);
+  Serial.println(b);
+  //  valorTemp = (valorTemp * m) - b;
 
   return;
 }
@@ -451,3 +363,118 @@ void sensor_OTT(void)
 }
 /*------------------------ FIN FUNCIONES SENSOR LIMNIMÉTRICO OTT ---------------------*/
 
+
+/*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
+bool comandoAT(String comando, char resp[3], byte contador)
+{
+  mySerial.begin(9600);
+  char c;
+  respuesta = "ERROR";
+
+  while (mySerial.available() > 0)
+  {
+    char basura = mySerial.read();
+  }
+
+  while ((respuesta.indexOf(resp) == -1) && (contador != 0))
+  {
+    delay(2000);
+    respuesta = "";
+    contador--;
+    mySerial.flush();
+    //mySerial.print('\b');
+    mySerial.println(comando);
+    Serial.print(comando);
+    while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
+    {
+      do
+      {
+        c = LF;
+        if (mySerial.available())
+        {
+          c = mySerial.read();
+          respuesta += c;
+        }
+      }
+      while (c != LF);
+    }
+    Serial.println(respuesta);
+  }
+  mySerial.flush();
+  mySerial.end();
+  Serial.flush();
+  if (respuesta.indexOf(resp) != -1)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+//-----------------------------------------------------------------------------
+//Despierta al módulo GSM/GPRS mediante el pin de reset y envía el
+//comando AT para verificar que está funcionando normalmente.
+bool reset_telit(void)
+{
+  digitalWrite(RSTpin, HIGH);
+  delay(220);
+  digitalWrite(RSTpin, LOW);
+  delay(5000);
+  if (comandoAT("AT", "OK", 10))
+  {
+    if (comandoAT("AT+CFUN=1", "OK", 10))
+    {
+      if (comandoAT("AT+CSDF=1,2", "OK", 10))
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+//-----------------------------------------------------------------------------
+//transmite vía comunicación serie (UART) el comando AT adecuado para apagar
+//el módulo GSM
+bool apagar_telit(void)
+{
+  if (comandoAT("AT#SYSHALT", "OK", 10))
+  {
+    return true;
+  }
+  return false;
+}
+//-----------------------------------------------------------------------------
+//Obtiene la fecha y hora actual del RTC del TELIT y lo guarda en el string
+//fechaYhora.
+void get_fecha_hora(void)
+{
+  if (comandoAT("AT+CCLK?", "OK", 10))
+  {
+    fechaYhora = respuesta.substring(10, 29);
+    return true;
+  }
+  return false;
+}
+//-----------------------------------------------------------------------------
+//Establece el valor de fecha y hora ingresado por el usuario en el menú USB
+//y setea dicho valor en el RTC del módulo TELIT
+void set_fecha_hora(void)
+{
+  delay(1000);
+  respuesta = "";
+  Serial.print("Configurar fecha/hora? <s/n>: ");
+  respuesta = Serial.readStringUntil(CR);
+  if (respuesta.indexOf("s") != -1)
+  {
+    fechaYhora = "";
+    Serial.println();
+    Serial.setTimeout(20000);
+    Serial.print("Introduzca la fecha y hora en formato <aaaa/mm/dd,hh:mm:ss>: ");
+    fechaYhora = Serial.readStringUntil(CR);
+    Serial.println();
+    comandoAT("AT+CCLK=\"" + fechaYhora + "+00\"", "OK", 10);
+  }
+  return;
+}
+/*------------------------ FIN FUNCIONES CONTROL MÓDULO TELIT ------------------------*/

@@ -4,7 +4,6 @@
 #include "SDI12Mod.h"
 #include <SPI.h>
 #include <SD.h>
-#include <EEPROM.h>
 
 #define VBATpin A0
 #define RELEpin A1
@@ -49,8 +48,8 @@
 
 
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
-#define delaySensor 90                 // pre-calentamiento del sensor (en segundos)
-#define frecuencia 10                 // frecuencia de transmisión de los datos (en minutos)
+#define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
+#define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -70,13 +69,14 @@
 
 const float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
 const String ID = "ELA02";                  // Identificador de la estación
-int valorSensor;
+String valorSensor;
 float valorTension = 0;
 String fechaYhora;
 String valorSenial;
 volatile bool rtcFlag = false;
 volatile bool timerFlag = false;
 volatile bool smsFlag = false;
+volatile bool ledFlag = false;
 String respuesta = "";
 File dataFile;
 
@@ -93,6 +93,7 @@ SDI12 mySDI12(SDIpin);
 /*---------------------------- CONFIGURACIONES INICIALES -----------------------------*/
 void setup()
 {
+  Watchdog.disable();
   delay(500);
   Serial.begin(9600);
   while (!Serial) {}
@@ -125,7 +126,6 @@ void setup()
 
   iniciar_SD();
   terminar_SD();
-  //calibrar_sensor();
 
   switch (tipoSensor)
   {
@@ -139,7 +139,6 @@ void setup()
   if (reset_telit())
   {
     get_fecha_hora();
-    //set_fecha_hora();
     set_alarma();
     get_senial();
     leer_sms();
@@ -159,6 +158,7 @@ void setup()
   }
 }
 /*--------------------- FIN CONFIGURACIONES INICIALES --------------------------------*/
+
 
 /*---------------------------PROGRAMA PRINCIPAL --------------------------------------*/
 void loop()
@@ -270,6 +270,19 @@ void SMSint()
   interrupts();
   return;
 }
+
+void blinkLED(void)
+{
+  if (ledFlag == LOW)
+  {
+    ledFlag = HIGH;
+  }
+  else
+  {
+    ledFlag = LOW;
+  }
+  digitalWrite(LEDpin, ledFlag);
+}
 /*------------------------------- FIN INTERRUPCIONES ---------------------------------*/
 
 
@@ -290,7 +303,7 @@ bool comandoAT(String comando, char resp[3], byte contador)
 
   while ((respuesta.indexOf(resp) == -1) && (contador != 0))
   {
-    delay(2000);
+    delay(1000);
     respuesta = "";
     contador--;
     mySerial.flush();
@@ -389,7 +402,14 @@ bool enviar_datos(void)
   String datos;
   datos.concat(fechaYhora.substring(0, 16));
   datos.concat(",");
-  datos.concat(valorSensor);
+  //  if (valorSensor < 0)
+  {
+    datos.concat("ERROR");
+  }
+  //  else
+  {
+    datos.concat(valorSensor);
+  }
   datos.concat(",");
   datos.concat(valorTension);
   datos.concat(",");
@@ -494,8 +514,8 @@ bool enviar_datos_sd(void)
         }
         mySerial.end();
       }
-      SD.remove("datosD");
       dataFile.close();
+      SD.remove("datosD");
       return true;
     }
     terminar_SD();
@@ -643,10 +663,10 @@ void get_senial(void)
 //--------------------------------------------------------------------------------------
 bool leer_sms()
 {
-  comandoAT("AT+CSDH=0","OK",10);
-  if(comandoAT("AT+CMGL=0","OK",10))
+  comandoAT("AT+CSDH=0", "OK", 10);
+  if (comandoAT("AT+CMGL", "OK", 10))
   {
-    if(respuesta.length()>10)
+    if (respuesta.length() > 10)
     {
       smsFlag = true;
     }
@@ -693,70 +713,49 @@ bool borrar_sms(void)
 }
 /*------------------------ FIN FUNCIONES CONTROL MÓDULO TELIT ------------------------*/
 
+
 /*--------------------------------- SENSOR 4-20mA ------------------------------------*/
 void sensor_420ma(void)
 {
   Watchdog.disable();
-  //Timer1.stop();
   digitalWrite(RELEpin, HIGH);
   delay(delaySensor * 1000);
   float valorSensorTemp = 0;
-  int valorSensorInt = 0;
   float m = valorMax / 820.0;
   float b = (203.0 * valorMax) / 820.0;
-  for (byte i = 0; i < 32; i++)
+  valorSensor = "";
+  for (int i = 0; i < 64; i++)
   {
     valorSensorTemp += analogRead(s420);
-    delay(10);
+    delay(1000);
   }
-  valorSensorTemp /= 32.0;
+  valorSensorTemp /= 64.0;
   valorSensorTemp = (valorSensorTemp * m) - b;
-  valorSensor = valorSensorTemp;
+  if (valorSensorTemp >= 10000.0)
+  {
+    valorSensor = String(valorSensorTemp).substring(0, 2);
+    valorSensor.concat(".");
+    valorSensor.concat(String(valorSensorTemp).substring(3, 5));
+  }
+  else if (valorSensorTemp < 10000.0 && valorSensorTemp >= 1000.0)
+  {
+    valorSensor = String(valorSensorTemp).substring(0, 1);
+    valorSensor.concat(".");
+    valorSensor.concat(String(valorSensorTemp).substring(1, 3));
+  }
+  else if (valorSensorTemp < 1000.0 && valorSensorTemp >= 0.0)
+  {
+    valorSensor.concat("0.");
+    valorSensor.concat(String(valorSensorTemp).substring(0, 2));
+  }
+  else if (valorSensorTemp < 0.0)
+  {
+    valorSensor = "ERROR";
+  }
+
   digitalWrite(RELEpin, LOW);
   Watchdog.enable(8000);
-  //Timer1.restart();
-  return;
-}
-
-void calibrar_sensor(void)
-{
-  Watchdog.disable();
-  //Timer1.stop();
-  delay(1000);
-  respuesta = "";
-  Serial.print("Calibrar sensor? <s/n>: ");
-  respuesta = Serial.readStringUntil(CR);
-  Serial.println();
-  if (respuesta.indexOf("s") != -1)
-  {
-    respuesta = "";
-    Serial.println("Modo calibracion. Presione 'e' para salir");
-    digitalWrite(RELEpin, HIGH);
-    delay(delaySensor * 1000);
-    while (respuesta.indexOf('e') == -1)
-    {
-      delay(500);
-      switch (tipoSensor)
-      {
-        case 0: sensor_420ma();
-          break;
-        case 1: sensor_SDI12();
-          break;
-        case 2: sensor_OTT();
-          break;
-        default: break;
-      }
-      Serial.println(valorSensor);
-      if (Serial.available() > 0)
-      {
-        respuesta = Serial.readStringUntil(CR);
-      }
-    }
-    digitalWrite(RELEpin, LOW);
-  }
-  Watchdog.enable(8000);
   Watchdog.reset();
-  //Timer1.restart();
   return;
 }
 /*-------------------------------- FIN SENSOR 4-20mA ---------------------------------*/
@@ -769,8 +768,7 @@ void sensor_SDI12(void)
   delay(delaySensor * 1000);
   mySDI12.begin();
   Watchdog.reset();
-  //Timer1.restart();
-  String sdiResponse = "";
+  respuesta = "";
   delay(1000);
   mySDI12.sendCommand("0M!");
   delay(30);
@@ -779,14 +777,13 @@ void sensor_SDI12(void)
     char c = mySDI12.read();
     if ((c != '\n') && (c != '\r'))
     {
-      sdiResponse += c;
+      respuesta += c;
       delay(5);
     }
   }
   mySDI12.clearBuffer();
   delay(1000);                 // delay between taking reading and requesting data
-  sdiResponse = "";           // clear the response string
-
+  respuesta = "";           // clear the response string
 
   // next command to request data from last measurement
   mySDI12.sendCommand("0D0!");
@@ -796,14 +793,14 @@ void sensor_SDI12(void)
   { // build string from response
     char c = mySDI12.read();
     if ((c != '\n') && (c != '\r')) {
-      sdiResponse += c;
+      respuesta += c;
       delay(5);
     }
   }
-  if (sdiResponse.length() > 1)
+  if (respuesta.length() > 1)
   {
-    sdiResponse = sdiResponse.substring(3, 7);
-    valorSensor = sdiResponse.toInt();
+    respuesta = respuesta.substring(3, 7);
+    valorSensor = respuesta;
   }
   mySDI12.clearBuffer();
 
@@ -817,102 +814,102 @@ void sensor_SDI12(void)
 /*-------------------------- FUNCIONES SENSOR LIMNIMÉTRICO OTT -----------------------*/
 void sensor_OTT(void)
 {
-  Watchdog.reset();
-  //Timer1.restart();
-  x_final = 0;
-  y_final = 0;
-  int k = 32;
-  int d = 5;
-
-  for (int i = 0; i < k; i++)
-  {
-    x_final += analogRead(OTTa);
-    y_final += analogRead(OTTb);
-  }
-  x_final = x_final / k;
-  y_final = y_final / k;
-
-  if (((x_final - x_inicial) < d) && ((x_final - x_inicial) > -d))
-  {
-    x_final = x_inicial;
-  }
-  if (((y_final - y_inicial) < d) && ((y_final - y_inicial) > -d))
-  {
-    y_final = y_inicial;
-  }
-
-  if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) > 0))
-  {
-    cuadrante_final = 1;
-  }
-  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) > 0))
-  {
-    cuadrante_final = 2;
-  }
-  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) < 0))
-  {
-    cuadrante_final = 3;
-  }
-  else if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) < -0))
-  {
-    cuadrante_final = 4;
-  }
-  else
-  {
-    cuadrante_final = cuadrante_final;
-  }
-
-  switch (cuadrante_inicial)
-  {
-    case 1: if (cuadrante_final == 2)
-      {
-        valorSensor += 55;
-      }
-      else if (cuadrante_final == 4)
-      {
-        valorSensor -= 55;
-      }
-      break;
-    case 2: if (cuadrante_final == 3)
-      {
-        valorSensor += 55;
-      }
-      else if (cuadrante_final == 1)
-      {
-        valorSensor -= 55;
-      }
-      break;
-    case 3: if (cuadrante_final == 4)
-      {
-        valorSensor += 55;
-      }
-      else if (cuadrante_final == 2)
-      {
-        valorSensor -= 55;
-      }
-      break;
-    case 4: if (cuadrante_final == 1)
-      {
-        valorSensor += 55;
-      }
-      else if (cuadrante_final == 3)
-      {
-        valorSensor -= 55;
-      }
-      break;
-  }
-
-  x_inicial = x_final;
-  y_inicial = y_final;
-  cuadrante_inicial = cuadrante_final;
-
-  //Serial.print(x_final);
-  //Serial.print("\t");
-  //Serial.print(y_final);
-  //Serial.print("\t");
-  //Serial.print(cuadrante_final);
-  //Serial.print("\t");
-  //Serial.println(valorSensor);
+  //  Watchdog.reset();
+  //  //Timer1.restart();
+  //  x_final = 0;
+  //  y_final = 0;
+  //  int k = 32;
+  //  int d = 5;
+  //
+  //  for (int i = 0; i < k; i++)
+  //  {
+  //    x_final += analogRead(OTTa);
+  //    y_final += analogRead(OTTb);
+  //  }
+  //  x_final = x_final / k;
+  //  y_final = y_final / k;
+  //
+  //  if (((x_final - x_inicial) < d) && ((x_final - x_inicial) > -d))
+  //  {
+  //    x_final = x_inicial;
+  //  }
+  //  if (((y_final - y_inicial) < d) && ((y_final - y_inicial) > -d))
+  //  {
+  //    y_final = y_inicial;
+  //  }
+  //
+  //  if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) > 0))
+  //  {
+  //    cuadrante_final = 1;
+  //  }
+  //  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) > 0))
+  //  {
+  //    cuadrante_final = 2;
+  //  }
+  //  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) < 0))
+  //  {
+  //    cuadrante_final = 3;
+  //  }
+  //  else if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) < -0))
+  //  {
+  //    cuadrante_final = 4;
+  //  }
+  //  else
+  //  {
+  //    cuadrante_final = cuadrante_final;
+  //  }
+  //
+  //  switch (cuadrante_inicial)
+  //  {
+  //    case 1: if (cuadrante_final == 2)
+  //      {
+  //        valorSensor += 55;
+  //      }
+  //      else if (cuadrante_final == 4)
+  //      {
+  //        valorSensor -= 55;
+  //      }
+  //      break;
+  //    case 2: if (cuadrante_final == 3)
+  //      {
+  //        valorSensor += 55;
+  //      }
+  //      else if (cuadrante_final == 1)
+  //      {
+  //        valorSensor -= 55;
+  //      }
+  //      break;
+  //    case 3: if (cuadrante_final == 4)
+  //      {
+  //        valorSensor += 55;
+  //      }
+  //      else if (cuadrante_final == 2)
+  //      {
+  //        valorSensor -= 55;
+  //      }
+  //      break;
+  //    case 4: if (cuadrante_final == 1)
+  //      {
+  //        valorSensor += 55;
+  //      }
+  //      else if (cuadrante_final == 3)
+  //      {
+  //        valorSensor -= 55;
+  //      }
+  //      break;
+  //  }
+  //
+  //  x_inicial = x_final;
+  //  y_inicial = y_final;
+  //  cuadrante_inicial = cuadrante_final;
+  //
+  //  //Serial.print(x_final);
+  //  //Serial.print("\t");
+  //  //Serial.print(y_final);
+  //  //Serial.print("\t");
+  //  //Serial.print(cuadrante_final);
+  //  //Serial.print("\t");
+  //  //Serial.println(valorSensor);
   return;
 }
 /*------------------------ FIN FUNCIONES SENSOR LIMNIMÉTRICO OTT ---------------------*/
@@ -938,7 +935,6 @@ void sensor_bateria()
 bool guardar_datos_l()
 {
   Watchdog.reset();
-  //Timer1.restart();
   bool flag = false;
   if (iniciar_SD())
   {
@@ -947,7 +943,7 @@ bool guardar_datos_l()
     {
       dataFile.print(fechaYhora.substring(0, 16));
       dataFile.print(",");
-      dataFile.print(String(valorSensor));
+      dataFile.print(valorSensor);
       dataFile.print(",");
       dataFile.print(String(valorTension));
       dataFile.print(",");
@@ -968,7 +964,6 @@ bool guardar_datos_l()
 bool guardar_datos_d()
 {
   Watchdog.reset();
-  //Timer1.restart();
   bool flag = false;
   if (iniciar_SD())
   {
@@ -977,7 +972,7 @@ bool guardar_datos_d()
     {
       dataFile.print(fechaYhora.substring(0, 16));
       dataFile.print(",");
-      dataFile.print(String(valorSensor));
+      dataFile.print(valorSensor);
       dataFile.print(",");
       dataFile.print(String(valorTension));
       dataFile.print(",");
@@ -998,7 +993,6 @@ bool guardar_datos_d()
 bool iniciar_SD()
 {
   Watchdog.reset();
-  //Timer1.restart();
   if (SD.begin(SDCSpin))
   {
     dataFile = SD.open("datosL", FILE_WRITE);
@@ -1024,7 +1018,6 @@ bool iniciar_SD()
 bool terminar_SD()
 {
   Watchdog.reset();
-  //Timer1.restart();
   SD.end();
   return;
 }
