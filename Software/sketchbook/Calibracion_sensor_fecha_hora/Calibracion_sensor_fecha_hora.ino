@@ -55,8 +55,12 @@
 #define LF 10
 #define CR 13
 
-const float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
-int valorSensor;
+const float valorMax = 10000.00;
+float valorSensorMax;
+float m = 0.0;
+float b = 0.0;
+String valorSensor;
+float valorSensorTemp;
 float valorTension = 0;
 String fechaYhora;
 String valorSenial;
@@ -155,7 +159,7 @@ void calibrar_sensor(void)
     respuesta = "";
     if (tipoSensor == 0)
     {
-      sensor_420ma();
+      //calibracion_sensor_420ma();
     }
     Serial.println("Modo calibracion. Presione 'e' para salir");
     while (respuesta.indexOf('e') == -1)
@@ -163,6 +167,8 @@ void calibrar_sensor(void)
       delay(500);
       switch (tipoSensor)
       {
+        case 0: sensor_420ma();
+          break;
         case 1: sensor_SDI12();
           break;
         case 2: sensor_OTT();
@@ -182,37 +188,79 @@ void calibrar_sensor(void)
 
 
 /*--------------------------------- SENSOR 4-20mA ------------------------------------*/
-void sensor_420ma(void)
+void calibracion_sensor_420ma(void)
 {
-  float valorSensorTemp = 0.0;
+  valorSensorTemp = 0.0;
   float valorSensorMin = 0.0;
   float valorSensorMax = 0.0;
-  float m = 0.0;
-  float b = 0.0;
-  Serial.println("Coloque el sensor en el valor mínimo");
+  m = 0.0;
+  b = 0.0;
+  Serial.println("Coloque el sensor en el valor minimo");
+  delay(10000);
+  Serial.println("midiendo...");
   for (int i = 0; i < 64; i++)
   {
     valorSensorTemp += analogRead(s420);
-    delay(10);
+    delay(100);
   }
   valorSensorMin = valorSensorTemp / 64.0;
+  Serial.print("Minimo: ");
   Serial.println(valorSensorMin);
 
-  Serial.println("Coloque el sensor en el valor máximo");
+  Serial.println("Coloque el sensor en el valor maximo");
+  delay(10000);
+  Serial.println("midiendo...");
+  for (int i = 0; i < 64; i++)
+  {
+    valorSensorTemp += analogRead(s420);
+    delay(100);
+  }
+  valorSensorMax = valorSensorTemp / 64.0;
+  Serial.print("Maximo:");
+  Serial.println(valorSensorMax);
+  m = (valorMax - 0.0) / (valorSensorMax - valorSensorMin);
+  Serial.print("Pendiente: ");
+  Serial.println(m);
+  b = valorSensorMin * m;
+  Serial.print("Ordenada al origen: ");
+  Serial.println(b);
+  return;
+}
+
+void sensor_420ma(void)
+{
+  m = valorMax / 820.0;             //COMENTAR
+  b = (203.0 * valorMax) / 820.0;   //COMENTAR
+  valorSensorTemp = 0;
+  valorSensor = "";
   for (int i = 0; i < 64; i++)
   {
     valorSensorTemp += analogRead(s420);
     delay(10);
   }
-  valorSensorMax = valorSensorTemp / 64.0;
-  Serial.println(valorSensorMax);
-
-  m = (valorMax - 0.0) / (valorSensorMax - valorSensorMin);
-  Serial.println(m);
-  b = (203.0 * valorSensorMax) / (valorSensorMax - valorSensorMin);
-  Serial.println(b);
-  //  valorTemp = (valorTemp * m) - b;
-
+  valorSensorTemp /= 64.0;
+  valorSensorTemp = (valorSensorTemp * m) - b;
+  if (valorSensorTemp >= 10000.0)
+  {
+    valorSensor = String(valorSensorTemp).substring(0, 2);
+    valorSensor.concat(".");
+    valorSensor.concat(String(valorSensorTemp).substring(3, 5));
+  }
+  else if (valorSensorTemp < 10000.0 && valorSensorTemp >= 1000.0)
+  {
+    valorSensor = String(valorSensorTemp).substring(0, 1);
+    valorSensor.concat(".");
+    valorSensor.concat(String(valorSensorTemp).substring(1, 3));
+  }
+  else if (valorSensorTemp < 1000.0 && valorSensorTemp >= 0.0)
+  {
+    valorSensor.concat("0.");
+    valorSensor.concat(String(valorSensorTemp).substring(0, 2));
+  }
+  else if (valorSensorTemp < 0.0)
+  {
+    valorSensor = "ERROR";
+  }
   return;
 }
 /*-------------------------------- FIN SENSOR 4-20mA ---------------------------------*/
@@ -265,92 +313,92 @@ void sensor_SDI12(void)
 /*-------------------------- FUNCIONES SENSOR LIMNIMÉTRICO OTT -----------------------*/
 void sensor_OTT(void)
 {
-  x_final = 0;
-  y_final = 0;
-  int k = 32;
-  int d = 5;
-
-  for (int i = 0; i < k; i++)
-  {
-    x_final += analogRead(OTTa);
-    y_final += analogRead(OTTb);
-  }
-  x_final = x_final / k;
-  y_final = y_final / k;
-
-  if (((x_final - x_inicial) < d) && ((x_final - x_inicial) > -d))
-  {
-    x_final = x_inicial;
-  }
-  if (((y_final - y_inicial) < d) && ((y_final - y_inicial) > -d))
-  {
-    y_final = y_inicial;
-  }
-
-  if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) > 0))
-  {
-    cuadrante_final = 1;
-  }
-  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) > 0))
-  {
-    cuadrante_final = 2;
-  }
-  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) < 0))
-  {
-    cuadrante_final = 3;
-  }
-  else if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) < -0))
-  {
-    cuadrante_final = 4;
-  }
-  else
-  {
-    cuadrante_final = cuadrante_final;
-  }
-
-  switch (cuadrante_inicial)
-  {
-    case 1: if (cuadrante_final == 2)
-      {
-        valorSensor += 55;
-      }
-      else if (cuadrante_final == 4)
-      {
-        valorSensor -= 55;
-      }
-      break;
-    case 2: if (cuadrante_final == 3)
-      {
-        valorSensor += 55;
-      }
-      else if (cuadrante_final == 1)
-      {
-        valorSensor -= 55;
-      }
-      break;
-    case 3: if (cuadrante_final == 4)
-      {
-        valorSensor += 55;
-      }
-      else if (cuadrante_final == 2)
-      {
-        valorSensor -= 55;
-      }
-      break;
-    case 4: if (cuadrante_final == 1)
-      {
-        valorSensor += 55;
-      }
-      else if (cuadrante_final == 3)
-      {
-        valorSensor -= 55;
-      }
-      break;
-  }
-
-  x_inicial = x_final;
-  y_inicial = y_final;
-  cuadrante_inicial = cuadrante_final;
+  //  x_final = 0;
+  //  y_final = 0;
+  //  int k = 32;
+  //  int d = 5;
+  //
+  //  for (int i = 0; i < k; i++)
+  //  {
+  //    x_final += analogRead(OTTa);
+  //    y_final += analogRead(OTTb);
+  //  }
+  //  x_final = x_final / k;
+  //  y_final = y_final / k;
+  //
+  //  if (((x_final - x_inicial) < d) && ((x_final - x_inicial) > -d))
+  //  {
+  //    x_final = x_inicial;
+  //  }
+  //  if (((y_final - y_inicial) < d) && ((y_final - y_inicial) > -d))
+  //  {
+  //    y_final = y_inicial;
+  //  }
+  //
+  //  if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) > 0))
+  //  {
+  //    cuadrante_final = 1;
+  //  }
+  //  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) > 0))
+  //  {
+  //    cuadrante_final = 2;
+  //  }
+  //  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) < 0))
+  //  {
+  //    cuadrante_final = 3;
+  //  }
+  //  else if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) < -0))
+  //  {
+  //    cuadrante_final = 4;
+  //  }
+  //  else
+  //  {
+  //    cuadrante_final = cuadrante_final;
+  //  }
+  //
+  //  switch (cuadrante_inicial)
+  //  {
+  //    case 1: if (cuadrante_final == 2)
+  //      {
+  //        valorSensor += 55;
+  //      }
+  //      else if (cuadrante_final == 4)
+  //      {
+  //        valorSensor -= 55;
+  //      }
+  //      break;
+  //    case 2: if (cuadrante_final == 3)
+  //      {
+  //        valorSensor += 55;
+  //      }
+  //      else if (cuadrante_final == 1)
+  //      {
+  //        valorSensor -= 55;
+  //      }
+  //      break;
+  //    case 3: if (cuadrante_final == 4)
+  //      {
+  //        valorSensor += 55;
+  //      }
+  //      else if (cuadrante_final == 2)
+  //      {
+  //        valorSensor -= 55;
+  //      }
+  //      break;
+  //    case 4: if (cuadrante_final == 1)
+  //      {
+  //        valorSensor += 55;
+  //      }
+  //      else if (cuadrante_final == 3)
+  //      {
+  //        valorSensor -= 55;
+  //      }
+  //      break;
+  //  }
+  //
+  //  x_inicial = x_final;
+  //  y_inicial = y_final;
+  //  cuadrante_inicial = cuadrante_final;
 
   //Serial.print(x_final);
   //Serial.print("\t");
