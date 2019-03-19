@@ -327,41 +327,4 @@ F 3 "" H 775 900 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	775  900  775  800 
-$Comp
-L Device:D_ALT D?
-U 1 1 5C87F87E
-P 1950 1000
-F 0 "D?" H 1950 784 50  0000 C CNN
-F 1 "D_ALT" H 1950 875 50  0000 C CNN
-F 2 "" H 1950 1000 50  0001 C CNN
-F 3 "~" H 1950 1000 50  0001 C CNN
-	1    1950 1000
-	-1   0    0    1   
-$EndComp
-Text Label 1725 1000 2    50   ~ 0
-Vcc
-Wire Wire Line
-	1725 1000 1800 1000
-$Comp
-L Logic_LevelTranslator:TXB0108DQSR U?
-U 1 1 5C8806ED
-P 4750 4725
-F 0 "U?" H 4750 3939 50  0000 C CNN
-F 1 "TXB0108DQSR" H 4750 3848 50  0000 C CNN
-F 2 "Package_SON:USON-20_2x4mm_P0.4mm" H 4750 3975 50  0001 C CNN
-F 3 "http://www.ti.com/lit/ds/symlink/txb0108.pdf" H 4750 4625 50  0001 C CNN
-	1    4750 4725
-	-1   0    0    -1  
-$EndComp
-$Comp
-L Connector:USB_B J?
-U 1 1 5C8818BD
-P 10325 3825
-F 0 "J?" H 10380 4292 50  0000 C CNN
-F 1 "USB_B" H 10380 4201 50  0000 C CNN
-F 2 "" H 10475 3775 50  0001 C CNN
-F 3 " ~" H 10475 3775 50  0001 C CNN
-	1    10325 3825
-	1    0    0    -1  
-$EndComp
 $EndSCHEMATC

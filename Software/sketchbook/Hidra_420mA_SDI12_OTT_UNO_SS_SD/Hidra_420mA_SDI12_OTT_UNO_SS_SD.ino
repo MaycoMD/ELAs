@@ -48,8 +48,8 @@
 
 
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
-#define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
-#define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
+#define delaySensor 90                 // pre-calentamiento del sensor (en segundos)
+#define frecuencia 10                 // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -68,7 +68,7 @@
 #define CR 13
 
 const float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
-const String ID = "ELA02";                  // Identificador de la estación
+const String ID = "ELA00";                  // Identificador de la estación
 String valorSensor;
 float valorTension = 0;
 String fechaYhora;

@@ -526,3 +526,4 @@ void set_fecha_hora(void)
   return;
 }
 /*------------------------ FIN FUNCIONES CONTROL MÓDULO TELIT ------------------------*/
+
