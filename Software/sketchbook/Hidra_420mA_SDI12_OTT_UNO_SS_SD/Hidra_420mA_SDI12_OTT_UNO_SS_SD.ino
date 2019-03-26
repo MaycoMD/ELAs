@@ -2,6 +2,7 @@
 #include <avr/sleep.h>
 #include "SoftwareSerialMod.h"
 #include "SDI12Mod.h"
+#include <EEPROM.h>
 #include <SPI.h>
 #include <SD.h>
 
@@ -46,6 +47,16 @@
 // A3 -> OTTa
 // A4 -> OTTb
 
+#define pMIN 0
+#define pMAX 5
+#define pM 10
+#define pB 15
+
+// MAPEO EEPROM
+// 0 -> Minimo
+// 5 -> Maximo
+// 10 -> Pendiente (m)
+// 15 -> Ordenada al origen (b)
 
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
 #define delaySensor 90                 // pre-calentamiento del sensor (en segundos)
@@ -402,14 +413,7 @@ bool enviar_datos(void)
   String datos;
   datos.concat(fechaYhora.substring(0, 16));
   datos.concat(",");
-  //  if (valorSensor < 0)
-  {
-    datos.concat("ERROR");
-  }
-  //  else
-  {
-    datos.concat(valorSensor);
-  }
+  datos.concat(valorSensor);
   datos.concat(",");
   datos.concat(valorTension);
   datos.concat(",");
@@ -720,9 +724,12 @@ void sensor_420ma(void)
   Watchdog.disable();
   digitalWrite(RELEpin, HIGH);
   delay(delaySensor * 1000);
-  float valorSensorTemp = 0;
-  float m = valorMax / 820.0;
-  float b = (203.0 * valorMax) / 820.0;
+  float valorSensorTemp = 0.0;
+  float m;
+  EEPROM.get(pM, m);
+  float b;
+  EEPROM.get(pB, b);
+  //  float b = (203.0 * valorMax) / 820.0;
   valorSensor = "";
   for (int i = 0; i < 64; i++)
   {
@@ -731,28 +738,19 @@ void sensor_420ma(void)
   }
   valorSensorTemp /= 64.0;
   valorSensorTemp = (valorSensorTemp * m) - b;
-  if (valorSensorTemp >= 10000.0)
+  valorSensorTemp /= 1000.0;
+  if (valorSensorTemp >= 10.00)
   {
-    valorSensor = String(valorSensorTemp).substring(0, 2);
-    valorSensor.concat(".");
-    valorSensor.concat(String(valorSensorTemp).substring(3, 5));
+    valorSensor = "10.00";
   }
-  else if (valorSensorTemp < 10000.0 && valorSensorTemp >= 1000.0)
-  {
-    valorSensor = String(valorSensorTemp).substring(0, 1);
-    valorSensor.concat(".");
-    valorSensor.concat(String(valorSensorTemp).substring(1, 3));
-  }
-  else if (valorSensorTemp < 1000.0 && valorSensorTemp >= 0.0)
-  {
-    valorSensor.concat("0.");
-    valorSensor.concat(String(valorSensorTemp).substring(0, 2));
-  }
-  else if (valorSensorTemp < 0.0)
+  else if (valorSensorTemp < 0.01)
   {
     valorSensor = "ERROR";
   }
-
+  else
+  {
+    valorSensor = String(valorSensorTemp);
+  }
   digitalWrite(RELEpin, LOW);
   Watchdog.enable(8000);
   Watchdog.reset();
