@@ -1,6 +1,7 @@
 #include "SoftwareSerialMod.h"
 #include "SDI12Mod.h"
 #include <SPI.h>
+#include <EEPROM.h>
 
 #define VBATpin A0
 #define RELEpin A1
@@ -35,6 +36,17 @@
 // 13 -> SD_CLK
 // 14 -> GND
 
+#define pMIN 0
+#define pMAX 5
+#define pM 10
+#define pB 15
+
+// MAPEO EEPROM
+// 0 -> Minimo
+// 5 -> Maximo
+// 10 -> Pendiente (m)
+// 15 -> Ordenada al origen (b)
+
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
 #define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
 #define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
@@ -55,13 +67,14 @@
 #define LF 10
 #define CR 13
 
-const float valorMax = 10000.00;
+float valorMax = 10000.0;
 float valorSensorMax;
+float valorSensorMin;
 float m = 0.0;
 float b = 0.0;
 String valorSensor;
 float valorSensorTemp;
-float valorTension = 0;
+float valorTension = 0.0;
 String fechaYhora;
 String valorSenial;
 volatile bool interrupcion = false;
@@ -105,314 +118,198 @@ void setup()
   digitalWrite(RELEpin, LOW);
   digitalWrite(LEDpin, LOW);
 
+  delay(1000);
   if (encender_sensor())
   {
-    calibrar_sensor();
+    digitalWrite(RELEpin, HIGH);
+    calibracion_sensor_420ma();
     digitalWrite(RELEpin, LOW);
   }
 
-  Serial.println("Reiniciando Telit");
-  if (reset_telit())
+  if (encender_telit())
   {
-    get_fecha_hora();
-    set_fecha_hora();
-    Serial.println();
-    apagar_telit();
+    if (reset_telit())
+    {
+      get_fecha_hora();
+      set_fecha_hora();
+      Serial.println();
+      apagar_telit();
+    }
   }
 
+  Serial.println();
+  EEPROM.get(pMIN, valorSensorMin);
+  Serial.print("Valor minimo del sensor: ");
+  Serial.println(valorSensorMin);
+  EEPROM.get(pMAX, valorSensorMax);
+  Serial.print("Valor maximo del sensor: ");
+  Serial.println(valorSensorMax);
+  EEPROM.get(pM, m);
+  Serial.print("Pendiente: ");
+  Serial.println(m);
+  EEPROM.get(pB, b);
+  Serial.print("Ordenada al origen: ");
+  Serial.println(b);
 }
 /*--------------------- FIN CONFIGURACIONES INICIALES --------------------------------*/
-
-/*---------------------------PROGRAMA PRINCIPAL --------------------------------------*/
 void loop()
 {
-
+  delay(100);
+  valorSensorTemp = 0.0;
+  for (int i = 0; i < 64; i++)
+  {
+    valorSensorTemp += analogRead(s420);
+    delay(100);
+  }
+  valorSensorTemp /= 64.0;
+  Serial.print(valorSensorTemp);
+  Serial.print(" -> ");
+  valorSensorTemp = (valorSensorTemp * m) - b;
+  valorSensor = String(valorSensorTemp);
+  Serial.print(valorSensor);
+  Serial.print(" -> ");
+  valorSensorTemp /= 1000.0;
+  if (valorSensorTemp >= 10.00)
+  {
+    valorSensor = "10.00";
+  }
+  else if (valorSensorTemp < 0.01)
+  {
+    valorSensor = "ERROR";
+  }
+  else
+  {
+    valorSensor = String(valorSensorTemp);
+  }
+  Serial.println(valorSensor);
 }
 //---------------------------------------------------------------------------------------
 bool encender_sensor()
 {
+  bool n = 1;
   delay(1000);
   respuesta = "";
-  Serial.print("Encender sensor? <s/n>: ");
-  respuesta = Serial.readStringUntil(CR);
-  Serial.println();
-  if (respuesta.indexOf("s") != -1)
+  while (n)
   {
-    respuesta = "";
-    digitalWrite(RELEpin, HIGH);
-    delay(delaySensor * 1000);
-    Serial.println("Sensor encendido");
-    return true;
+    Serial.print("Encender sensor? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      n = 0;
+      digitalWrite(RELEpin, HIGH);
+      delay(delaySensor * 1000);
+      Serial.println("Sensor encendido");
+      return true;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return false;
+    }
   }
-  return false;
 }
 //---------------------------------------------------------------------------------------
-void calibrar_sensor(void)
-{
-  delay(1000);
-  respuesta = "";
-  Serial.print("Calibrar sensor? <s/n>: ");
-  respuesta = Serial.readStringUntil(CR);
-  Serial.println();
-  if (respuesta.indexOf("s") != -1)
-  {
-    respuesta = "";
-    if (tipoSensor == 0)
-    {
-      //calibracion_sensor_420ma();
-    }
-    Serial.println("Modo calibracion. Presione 'e' para salir");
-    while (respuesta.indexOf('e') == -1)
-    {
-      delay(500);
-      switch (tipoSensor)
-      {
-        case 0: sensor_420ma();
-          break;
-        case 1: sensor_SDI12();
-          break;
-        case 2: sensor_OTT();
-          break;
-        default: break;
-      }
-      Serial.println(valorSensor);
-      if (Serial.available() > 0)
-      {
-        respuesta = Serial.readStringUntil(CR);
-      }
-    }
-  }
-  return;
-}
-/*---------------------------- FIN PROGRAMA PRINCIPAL --------------------------------*/
-
-
-/*--------------------------------- SENSOR 4-20mA ------------------------------------*/
 void calibracion_sensor_420ma(void)
 {
-  valorSensorTemp = 0.0;
-  float valorSensorMin = 0.0;
-  float valorSensorMax = 0.0;
+  valorSensorMin = 1023.0;
+  valorSensorMax = 0.0;
   m = 0.0;
   b = 0.0;
+
   Serial.println("Coloque el sensor en el valor minimo");
-  delay(10000);
+  delay(20000);
   Serial.println("midiendo...");
-  for (int i = 0; i < 64; i++)
+  delay(5000);
+  for (int j = 0; j < 10; j++)
   {
-    valorSensorTemp += analogRead(s420);
-    delay(100);
+    valorSensorTemp = 0.0;
+    for (int i = 0; i < 64; i++)
+    {
+      valorSensorTemp += analogRead(s420);
+      delay(100);
+    }
+    valorSensorTemp /= 64.0;
+    Serial.println(valorSensorTemp);
+    if (valorSensorTemp < valorSensorMin)
+    {
+      valorSensorMin = valorSensorTemp;
+    }
   }
-  valorSensorMin = valorSensorTemp / 64.0;
   Serial.print("Minimo: ");
   Serial.println(valorSensorMin);
+  EEPROM.put(pMIN, valorSensorMin);
+  Serial.println("Almecenado en EEPROM");
+  Serial.println();
 
   Serial.println("Coloque el sensor en el valor maximo");
-  delay(10000);
+  delay(20000);
   Serial.println("midiendo...");
-  for (int i = 0; i < 64; i++)
+  delay(5000);
+  for (int j = 0; j < 10; j++)
   {
-    valorSensorTemp += analogRead(s420);
-    delay(100);
+    valorSensorTemp = 0.0;
+    for (int i = 0; i < 64; i++)
+    {
+      valorSensorTemp += analogRead(s420);
+      delay(100);
+    }
+    valorSensorTemp /= 64.0;
+    Serial.println(valorSensorTemp);
+    if (valorSensorTemp > valorSensorMax)
+    {
+      valorSensorMax = valorSensorTemp;
+    }
   }
-  valorSensorMax = valorSensorTemp / 64.0;
   Serial.print("Maximo:");
   Serial.println(valorSensorMax);
-  m = (valorMax - 0.0) / (valorSensorMax - valorSensorMin);
+  EEPROM.put(pMAX, valorSensorMax);
+  Serial.println("Almecenado en EEPROM");
+  Serial.println();
+
+  m = valorMax / (valorSensorMax - valorSensorMin);
   Serial.print("Pendiente: ");
   Serial.println(m);
+  EEPROM.put(pM, m);
+  Serial.println("Almecenado en EEPROM");
+  Serial.println();
   b = valorSensorMin * m;
   Serial.print("Ordenada al origen: ");
   Serial.println(b);
+  EEPROM.put(pB, b);
+  Serial.println("Almacenado en EEPROM");
+  Serial.println();
+
+  delay(1000);
   return;
 }
-
-void sensor_420ma(void)
-{
-  m = valorMax / 820.0;             //COMENTAR
-  b = (203.0 * valorMax) / 820.0;   //COMENTAR
-  valorSensorTemp = 0;
-  valorSensor = "";
-  for (int i = 0; i < 64; i++)
-  {
-    valorSensorTemp += analogRead(s420);
-    delay(10);
-  }
-  valorSensorTemp /= 64.0;
-  valorSensorTemp = (valorSensorTemp * m) - b;
-  if (valorSensorTemp >= 10000.0)
-  {
-    valorSensor = String(valorSensorTemp).substring(0, 2);
-    valorSensor.concat(".");
-    valorSensor.concat(String(valorSensorTemp).substring(3, 5));
-  }
-  else if (valorSensorTemp < 10000.0 && valorSensorTemp >= 1000.0)
-  {
-    valorSensor = String(valorSensorTemp).substring(0, 1);
-    valorSensor.concat(".");
-    valorSensor.concat(String(valorSensorTemp).substring(1, 3));
-  }
-  else if (valorSensorTemp < 1000.0 && valorSensorTemp >= 0.0)
-  {
-    valorSensor.concat("0.");
-    valorSensor.concat(String(valorSensorTemp).substring(0, 2));
-  }
-  else if (valorSensorTemp < 0.0)
-  {
-    valorSensor = "ERROR";
-  }
-  return;
-}
-/*-------------------------------- FIN SENSOR 4-20mA ---------------------------------*/
-
-
-/*--------------------------------- SENSOR SDI-12 ------------------------------------*/
-void sensor_SDI12(void)
-{
-  mySDI12.begin();
-  String sdiResponse = "";
-  mySDI12.sendCommand("0M!");
-  delay(30);
-  while (mySDI12.available())  // build response string
-  {
-    char c = mySDI12.read();
-    if ((c != '\n') && (c != '\r'))
-    {
-      sdiResponse += c;
-      delay(5);
-    }
-  }
-  mySDI12.clearBuffer();
-  delay(1000);                 // delay between taking reading and requesting data
-  sdiResponse = "";           // clear the response string
-
-  // next command to request data from last measurement
-  mySDI12.sendCommand("0D0!");
-  delay(30);                     // wait a while for a response
-
-  while (mySDI12.available())
-  { // build string from response
-    char c = mySDI12.read();
-    if ((c != '\n') && (c != '\r')) {
-      sdiResponse += c;
-      delay(5);
-    }
-  }
-  if (sdiResponse.length() > 1)
-  {
-    sdiResponse = sdiResponse.substring(3, 7);
-    valorSensor = sdiResponse.toInt();
-  }
-  mySDI12.clearBuffer();
-  mySDI12.end();
-  return;
-}
-/*--------------------------------- FIN SENSOR SDI-12 --------------------------------*/
-
-
-/*-------------------------- FUNCIONES SENSOR LIMNIMÉTRICO OTT -----------------------*/
-void sensor_OTT(void)
-{
-  //  x_final = 0;
-  //  y_final = 0;
-  //  int k = 32;
-  //  int d = 5;
-  //
-  //  for (int i = 0; i < k; i++)
-  //  {
-  //    x_final += analogRead(OTTa);
-  //    y_final += analogRead(OTTb);
-  //  }
-  //  x_final = x_final / k;
-  //  y_final = y_final / k;
-  //
-  //  if (((x_final - x_inicial) < d) && ((x_final - x_inicial) > -d))
-  //  {
-  //    x_final = x_inicial;
-  //  }
-  //  if (((y_final - y_inicial) < d) && ((y_final - y_inicial) > -d))
-  //  {
-  //    y_final = y_inicial;
-  //  }
-  //
-  //  if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) > 0))
-  //  {
-  //    cuadrante_final = 1;
-  //  }
-  //  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) > 0))
-  //  {
-  //    cuadrante_final = 2;
-  //  }
-  //  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) < 0))
-  //  {
-  //    cuadrante_final = 3;
-  //  }
-  //  else if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) < -0))
-  //  {
-  //    cuadrante_final = 4;
-  //  }
-  //  else
-  //  {
-  //    cuadrante_final = cuadrante_final;
-  //  }
-  //
-  //  switch (cuadrante_inicial)
-  //  {
-  //    case 1: if (cuadrante_final == 2)
-  //      {
-  //        valorSensor += 55;
-  //      }
-  //      else if (cuadrante_final == 4)
-  //      {
-  //        valorSensor -= 55;
-  //      }
-  //      break;
-  //    case 2: if (cuadrante_final == 3)
-  //      {
-  //        valorSensor += 55;
-  //      }
-  //      else if (cuadrante_final == 1)
-  //      {
-  //        valorSensor -= 55;
-  //      }
-  //      break;
-  //    case 3: if (cuadrante_final == 4)
-  //      {
-  //        valorSensor += 55;
-  //      }
-  //      else if (cuadrante_final == 2)
-  //      {
-  //        valorSensor -= 55;
-  //      }
-  //      break;
-  //    case 4: if (cuadrante_final == 1)
-  //      {
-  //        valorSensor += 55;
-  //      }
-  //      else if (cuadrante_final == 3)
-  //      {
-  //        valorSensor -= 55;
-  //      }
-  //      break;
-  //  }
-  //
-  //  x_inicial = x_final;
-  //  y_inicial = y_final;
-  //  cuadrante_inicial = cuadrante_final;
-
-  //Serial.print(x_final);
-  //Serial.print("\t");
-  //Serial.print(y_final);
-  //Serial.print("\t");
-  //Serial.print(cuadrante_final);
-  //Serial.print("\t");
-  //Serial.println(valorSensor);
-  return;
-}
-/*------------------------ FIN FUNCIONES SENSOR LIMNIMÉTRICO OTT ---------------------*/
 
 
 /*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
+bool encender_telit()
+{
+  bool n = 1;
+  delay(1000);
+  respuesta = "";
+  while (n)
+  {
+    Serial.print("Reiniciar Telit?? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      n = 0;
+      return true;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return false;
+    }
+  }
+}
+//---------------------------------------------------------------------------------------
+
 bool comandoAT(String comando, char resp[3], byte contador)
 {
   mySerial.begin(9600);
@@ -430,7 +327,6 @@ bool comandoAT(String comando, char resp[3], byte contador)
     respuesta = "";
     contador--;
     mySerial.flush();
-    //mySerial.print('\b');
     mySerial.println(comando);
     Serial.print(comando);
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
