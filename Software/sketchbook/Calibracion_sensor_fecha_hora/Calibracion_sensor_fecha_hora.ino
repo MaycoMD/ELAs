@@ -48,7 +48,7 @@
 // 15 -> Ordenada al origen (b)
 
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
-#define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
+#define delaySensor 10                 // pre-calentamiento del sensor (en segundos)
 #define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
@@ -121,9 +121,10 @@ void setup()
   delay(1000);
   if (encender_sensor())
   {
-    digitalWrite(RELEpin, HIGH);
-    calibracion_sensor_420ma();
-    digitalWrite(RELEpin, LOW);
+    if (calibrar_sensor())
+    {
+      calibracion_sensor_420ma();
+    }
   }
 
   if (encender_telit())
@@ -154,7 +155,8 @@ void setup()
 /*--------------------- FIN CONFIGURACIONES INICIALES --------------------------------*/
 void loop()
 {
-  delay(100);
+  digitalWrite(RELEpin, HIGH);
+  delay(delaySensor * 1000);
   valorSensorTemp = 0.0;
   for (int i = 0; i < 64; i++)
   {
@@ -197,9 +199,33 @@ bool encender_sensor()
     if (respuesta.indexOf("s") != -1)
     {
       n = 0;
+      Serial.println("Iniciando sensor... ");
       digitalWrite(RELEpin, HIGH);
       delay(delaySensor * 1000);
       Serial.println("Sensor encendido");
+      return true;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return false;
+    }
+  }
+}
+//---------------------------------------------------------------------------------------
+bool calibrar_sensor()
+{
+  bool n = 1;
+  delay(1000);
+  respuesta = "";
+  while (n)
+  {
+    Serial.print("Calibrar sensor? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      n = 0;
       return true;
     }
     else if (respuesta.indexOf("n") != -1)
@@ -293,7 +319,7 @@ bool encender_telit()
   respuesta = "";
   while (n)
   {
-    Serial.print("Reiniciar Telit?? <s/n>: ");
+    Serial.print("Reiniciar Telit? <s/n>: ");
     respuesta = Serial.readStringUntil(CR);
     Serial.println();
     if (respuesta.indexOf("s") != -1)
