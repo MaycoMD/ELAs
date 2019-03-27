@@ -40,16 +40,17 @@
 #define pMAX 5
 #define pM 10
 #define pB 15
+#define pFREC 20
 
 // MAPEO EEPROM
 // 0 -> Minimo
 // 5 -> Maximo
 // 10 -> Pendiente (m)
 // 15 -> Ordenada al origen (b)
+// 20 -> Frecuencia de transmisión
 
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
 #define delaySensor 10                 // pre-calentamiento del sensor (en segundos)
-#define frecuencia 5                 // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -67,6 +68,7 @@
 #define LF 10
 #define CR 13
 
+int frecuencia;
 float valorMax = 10000.0;
 float valorSensorMax;
 float valorSensorMin;
@@ -119,6 +121,27 @@ void setup()
   digitalWrite(LEDpin, LOW);
 
   delay(1000);
+
+  Serial.println();
+  EEPROM.get(pMIN, valorSensorMin);
+  Serial.print("Valor minimo del sensor: ");
+  Serial.println(valorSensorMin);
+  EEPROM.get(pMAX, valorSensorMax);
+  Serial.print("Valor maximo del sensor: ");
+  Serial.println(valorSensorMax);
+  EEPROM.get(pM, m);
+  Serial.print("Pendiente: ");
+  Serial.println(m);
+  EEPROM.get(pB, b);
+  Serial.print("Ordenada al origen: ");
+  Serial.println(b);
+  EEPROM.get(pFREC, frecuencia);
+  Serial.print("Frecuencia de transmision: ");
+  Serial.print(frecuencia);
+  Serial.println(" minutos");
+
+  cambiar_frecuencia();
+
   if (encender_sensor())
   {
     if (calibrar_sensor())
@@ -151,6 +174,11 @@ void setup()
   EEPROM.get(pB, b);
   Serial.print("Ordenada al origen: ");
   Serial.println(b);
+  EEPROM.get(pFREC, frecuencia);
+  Serial.print("Frecuencia de transmision: ");
+  Serial.print(frecuencia);
+  Serial.println(" minutos");
+  Serial.println();
 }
 /*--------------------- FIN CONFIGURACIONES INICIALES --------------------------------*/
 void loop()
@@ -186,11 +214,46 @@ void loop()
   Serial.println(valorSensor);
 }
 //---------------------------------------------------------------------------------------
+void cambiar_frecuencia()
+{
+  bool n = 1;
+  delay(1000);
+  respuesta = "";
+  Serial.println();
+  while (n)
+  {
+    Serial.print("Modificar frecuencia? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      frecuencia = "";
+      Serial.println();
+      Serial.setTimeout(20000);
+      Serial.print("Introduzca la nueva frecuencia (en minutos): ");
+      respuesta = Serial.readStringUntil(CR);
+      Serial.println();
+      frecuencia = int(respuesta.toInt());
+      Serial.print("Frecuencia: ");
+      Serial.println(frecuencia);
+      EEPROM.put(pFREC, frecuencia);
+      Serial.println("Almacenado en EEPROM");
+      return;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return;
+    }
+  }
+}
+//---------------------------------------------------------------------------------------
 bool encender_sensor()
 {
   bool n = 1;
   delay(1000);
   respuesta = "";
+  Serial.println();
   while (n)
   {
     Serial.print("Encender sensor? <s/n>: ");
@@ -218,6 +281,7 @@ bool calibrar_sensor()
   bool n = 1;
   delay(1000);
   respuesta = "";
+  Serial.println();
   while (n)
   {
     Serial.print("Calibrar sensor? <s/n>: ");
@@ -265,7 +329,7 @@ void calibracion_sensor_420ma(void)
   Serial.print("Minimo: ");
   Serial.println(valorSensorMin);
   EEPROM.put(pMIN, valorSensorMin);
-  Serial.println("Almecenado en EEPROM");
+  Serial.println("Almacenado en EEPROM");
   Serial.println();
 
   Serial.println("Coloque el sensor en el valor maximo");
@@ -290,14 +354,14 @@ void calibracion_sensor_420ma(void)
   Serial.print("Maximo:");
   Serial.println(valorSensorMax);
   EEPROM.put(pMAX, valorSensorMax);
-  Serial.println("Almecenado en EEPROM");
+  Serial.println("Almacenado en EEPROM");
   Serial.println();
 
   m = valorMax / (valorSensorMax - valorSensorMin);
   Serial.print("Pendiente: ");
   Serial.println(m);
   EEPROM.put(pM, m);
-  Serial.println("Almecenado en EEPROM");
+  Serial.println("Almacenado en EEPROM");
   Serial.println();
   b = valorSensorMin * m;
   Serial.print("Ordenada al origen: ");
@@ -317,6 +381,7 @@ bool encender_telit()
   bool n = 1;
   delay(1000);
   respuesta = "";
+  Serial.println();
   while (n)
   {
     Serial.print("Reiniciar Telit? <s/n>: ");

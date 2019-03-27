@@ -1,3 +1,4 @@
+//============================= LIBRERÍAS ==================================
 #include <Adafruit_SleepyDog.h>
 #include <avr/sleep.h>
 #include "SoftwareSerialMod.h"
@@ -6,6 +7,7 @@
 #include <SPI.h>
 #include <SD.h>
 
+//========================== CONFIGURACIÓN PINES ==========================
 #define VBATpin A0
 #define RELEpin A1
 #define s420 A2
@@ -47,20 +49,24 @@
 // A3 -> OTTa
 // A4 -> OTTb
 
+//============================= DIRECCIONES EEPROM =========================
 #define pMIN 0
 #define pMAX 5
 #define pM 10
 #define pB 15
+#define pFREC 20
 
 // MAPEO EEPROM
 // 0 -> Minimo
 // 5 -> Maximo
 // 10 -> Pendiente (m)
 // 15 -> Ordenada al origen (b)
+// 20 -> Frecuecia de transmisión
 
-#define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
-#define delaySensor 90                 // pre-calentamiento del sensor (en segundos)
-#define frecuencia 10                 // frecuencia de transmisión de los datos (en minutos)
+//======================== CONFIGURACIONES SENSORES ========================
+#define tipoSensor 0          // tipo de sensor a utilizar (0~3)
+#define delaySensor 120       // pre-calentamiento del sensor (en segundos)
+//#define frecuencia 5         // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -75,19 +81,17 @@
 // ELF01 -> Cruz Alta
 // ELF02 -> Saladillo
 
+//=============================== VARIABLES ================================
 #define LF 10
 #define CR 13
-
-const float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
-const String ID = "ELA00";                  // Identificador de la estación
+unsigned int frecuencia;            // frecuencia de transmisión de los datos (en minutos)
+const float valorMax = 10000.0;     // máximo valor a medir por el sensor (en milimetros)
+const String ID = "ELA00";          // Identificador de la estación
 String valorSensor;
 float valorTension = 0;
 String fechaYhora;
 String valorSenial;
 volatile bool rtcFlag = false;
-volatile bool timerFlag = false;
-volatile bool smsFlag = false;
-volatile bool ledFlag = false;
 String respuesta = "";
 File dataFile;
 
@@ -101,6 +105,7 @@ unsigned int y_final;
 SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
 SDI12 mySDI12(SDIpin);
 
+//=============================== PROGRAMA ==================================
 /*---------------------------- CONFIGURACIONES INICIALES -----------------------------*/
 void setup()
 {
@@ -132,33 +137,38 @@ void setup()
   digitalWrite(RELEpin, LOW);
   digitalWrite(LEDpin, LOW);
 
+  EEPROM.get(pFREC, frecuencia);
+  if (frecuencia <= 5)
+  {
+    digitalWrite(RELEpin, HIGH);
+  }
+
   attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
   interrupts();
 
   iniciar_SD();
   terminar_SD();
 
-  switch (tipoSensor)
-  {
-    case 0: sensor_420ma();
-      break;
-    case 1: sensor_SDI12();
-      break;
-    default: break;
-  }
-  sensor_bateria();
   if (reset_telit())
   {
+    if (leer_sms())
+    {
+      borrar_sms();
+      switch (tipoSensor)
+      {
+        case 0: sensor_420ma();
+          break;
+        case 1: sensor_SDI12();
+          break;
+        default: break;
+      }
+      sensor_bateria();
+      get_fecha_hora();
+      get_senial();
+      enviar_sms();
+    }
     get_fecha_hora();
     set_alarma();
-    get_senial();
-    leer_sms();
-    if (smsFlag)
-    {
-      enviar_sms();
-      smsFlag = false;
-    }
-    borrar_sms();
     apagar_telit();
   }
 
@@ -202,9 +212,6 @@ void loop()
       Watchdog.reset();
       digitalWrite(LEDpin, LOW);
       reset_telit();
-      get_fecha_hora();
-      set_alarma();
-      sensor_bateria();
       switch (tipoSensor)
       {
         case 0: sensor_420ma();
@@ -213,7 +220,9 @@ void loop()
           break;
         default: break;
       }
+      sensor_bateria();
       get_senial();
+      get_fecha_hora();
       guardar_datos_l();
       bool datosFlag = false;
       if (guardar_datos_d())
@@ -236,6 +245,8 @@ void loop()
         }
         desconexion_gprs();
       }
+      get_fecha_hora();
+      set_alarma();
       apagar_telit();
       rtcFlag = false;
     }
@@ -281,19 +292,6 @@ void SMSint()
   interrupts();
   return;
 }
-
-void blinkLED(void)
-{
-  if (ledFlag == LOW)
-  {
-    ledFlag = HIGH;
-  }
-  else
-  {
-    ledFlag = LOW;
-  }
-  digitalWrite(LEDpin, ledFlag);
-}
 /*------------------------------- FIN INTERRUPCIONES ---------------------------------*/
 
 
@@ -318,11 +316,9 @@ bool comandoAT(String comando, char resp[3], byte contador)
     respuesta = "";
     contador--;
     mySerial.flush();
-    //mySerial.print('\b');
     mySerial.println(comando);
     Serial.print(comando);
     Watchdog.reset();
-    timerFlag = false;
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
       do
@@ -341,6 +337,57 @@ bool comandoAT(String comando, char resp[3], byte contador)
   mySerial.flush();
   mySerial.end();
   Serial.flush();
+  if (respuesta.indexOf(resp) != -1)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+//--------------------------------------------------------------------------------------
+bool comandoATnoWDT(String comando, char resp[3], byte contador)
+{
+  Watchdog.disable();
+  mySerial.begin(9600);
+  char c;
+  respuesta = "ERROR";
+
+  while (mySerial.available() > 0)
+  {
+    char basura = mySerial.read();
+  }
+
+  while ((respuesta.indexOf(resp) == -1) && (contador != 0))
+  {
+    delay(1000);
+    respuesta = "";
+    contador--;
+    mySerial.flush();
+    mySerial.println(comando);
+    Serial.print(comando);
+    while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
+    {
+      do
+      {
+        c = LF;
+        if (mySerial.available())
+        {
+          c = mySerial.read();
+          respuesta += c;
+        }
+      }
+      while (c != LF);
+    }
+    Serial.println(respuesta);
+  }
+  mySerial.flush();
+  mySerial.end();
+  Serial.flush();
+  Watchdog.reset();
+  Watchdog.enable(8000);
+  Watchdog.reset();
   if (respuesta.indexOf(resp) != -1)
   {
     return true;
@@ -378,12 +425,8 @@ bool conexion_gprs(void)
 {
   if (comandoAT("AT#GPRS=0", "OK", 10))
   {
-    Watchdog.disable();
-    if (comandoAT("AT#GPRS=1", "OK", 10))
+    if (comandoATnoWDT("AT#GPRS=1", "OK", 10))
     {
-      Watchdog.reset();
-      Watchdog.enable(8000);
-      Watchdog.reset();
       return true;
     }
   }
@@ -394,11 +437,11 @@ bool conexion_ftp()
 {
   if (comandoAT("AT#FTPTO=5000", "OK", 10))
   {
-    if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10)) // 0->Active Mode, 1->Passive Mode
+    if (comandoATnoWDT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10)) // 0->Active Mode, 1->Passive Mode
     {
       if (comandoAT("AT#FTPTYPE=1", "OK", 10)) // 0->Binary, 1->ASCII
       {
-        if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
+        if (comandoATnoWDT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
         {
           return true;
         }
@@ -651,7 +694,6 @@ void set_alarma(void)
   comandoAT("AT+CALA=\"" + strHora + ":" + strMinutos + ":00+00\",0,4,,\"0\",0", "OK", 10);
   return;
 }
-
 //--------------------------------------------------------------------------------------
 void get_senial(void)
 {
@@ -672,14 +714,21 @@ bool leer_sms()
   {
     if (respuesta.length() > 10)
     {
-      smsFlag = true;
+      int index1 = respuesta.indexOf("<frec=");
+      if (index1 != -1)
+      {
+        int index2 = respuesta.indexOf(">");
+        respuesta = respuesta.substring(index1 + 6, index2);
+        frecuencia = int(respuesta.toInt());
+        EEPROM.put(pFREC, frecuencia);
+      }
+      return true;
     }
     else
     {
-      smsFlag = false;
+      return false;
     }
   }
-  return;
 }
 //--------------------------------------------------------------------------------------
 bool enviar_sms(void)
@@ -722,14 +771,19 @@ bool borrar_sms(void)
 void sensor_420ma(void)
 {
   Watchdog.disable();
-  digitalWrite(RELEpin, HIGH);
-  delay(delaySensor * 1000);
+  if (frecuencia > 5)
+  {
+    digitalWrite(RELEpin, HIGH);
+    for (int i = 0; i < delaySensor; i++)
+    {
+      delay(1000);
+    }
+  }
   float valorSensorTemp = 0.0;
   float m;
   EEPROM.get(pM, m);
   float b;
   EEPROM.get(pB, b);
-  //  float b = (203.0 * valorMax) / 820.0;
   valorSensor = "";
   for (int i = 0; i < 64; i++)
   {
@@ -751,7 +805,11 @@ void sensor_420ma(void)
   {
     valorSensor = String(valorSensorTemp);
   }
-  digitalWrite(RELEpin, LOW);
+
+  if (frecuencia > 5)
+  {
+    digitalWrite(RELEpin, LOW);
+  }
   Watchdog.enable(8000);
   Watchdog.reset();
   return;
