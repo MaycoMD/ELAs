@@ -1,8 +1,8 @@
 //============================= LIBRERÍAS ==================================
-#include <Adafruit_SleepyDog.h>
-#include <avr/sleep.h>
-#include "SoftwareSerialMod.h"
-#include "SDI12Mod.h"
+#include <Adafruit_SleepyDog.h> // Watchdog Timer
+#include <avr/sleep.h>          // Sleep modes
+#include "SoftwareSerialMod.h"  // Software UART modificada
+#include "SDI12Mod.h"           // SDI-12 modificada
 #include <EEPROM.h>
 #include <SPI.h>
 #include <SD.h>
@@ -66,12 +66,11 @@
 //======================== CONFIGURACIONES SENSORES ========================
 #define tipoSensor 0          // tipo de sensor a utilizar (0~3)
 #define delaySensor 120       // pre-calentamiento del sensor (en segundos)
-//#define frecuencia 5         // frecuencia de transmisión de los datos (en minutos)
 
 // SENSORES:
 // 0 -> 4-20 mA
 // 1 -> SDI-12
-// 2 -> OTT
+// 2 -> Thalimedes
 // 3 -> Pulsos (No implementado)
 
 // ESTACIONES
@@ -87,7 +86,7 @@
 unsigned int frecuencia;            // frecuencia de transmisión de los datos (en minutos)
 const float valorMax = 10000.0;     // máximo valor a medir por el sensor (en milimetros)
 const String ID = "ELA00";          // Identificador de la estación
-String valorSensor;
+String valorSensor = "0.3";
 float valorTension = 0;
 String fechaYhora;
 String valorSenial;
@@ -95,12 +94,10 @@ volatile bool rtcFlag = false;
 String respuesta = "";
 File dataFile;
 
-unsigned int cuadrante_inicial;  // definiciones de variables
-unsigned int cuadrante_final;    // utilizadas con el sensor
-unsigned int x_inicial = 0;      // limnimétrico a flotador
-unsigned int y_inicial = 0;      // OTT
-unsigned int x_final;
-unsigned int y_final;
+int cuadrante_inicial;  // definiciones de variables
+int cuadrante_final;    // utilizadas con el sensor
+int x_inicial = 0;      // limnimétrico a flotador
+int y_inicial = 0;      // OTT
 
 SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
 SDI12 mySDI12(SDIpin);
@@ -140,7 +137,10 @@ void setup()
   EEPROM.get(pFREC, frecuencia);
   if (frecuencia <= 5)
   {
-    digitalWrite(RELEpin, HIGH);
+    if (tipoSensor != 2)
+    {
+      digitalWrite(RELEpin, HIGH);
+    }
   }
 
   attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
@@ -149,28 +149,28 @@ void setup()
   iniciar_SD();
   terminar_SD();
 
-  if (reset_telit())
-  {
-    if (leer_sms())
+    if (reset_telit())
     {
-      borrar_sms();
-      switch (tipoSensor)
+      if (leer_sms())
       {
-        case 0: sensor_420ma();
-          break;
-        case 1: sensor_SDI12();
-          break;
-        default: break;
+        borrar_sms();
+        switch (tipoSensor)
+        {
+          case 0: sensor_420ma();
+            break;
+          case 1: sensor_SDI12();
+            break;
+          default: break;
+        }
+        sensor_bateria();
+        get_fecha_hora();
+        get_senial();
+        enviar_sms();
       }
-      sensor_bateria();
       get_fecha_hora();
-      get_senial();
-      enviar_sms();
+      set_alarma();
+      apagar_telit();
     }
-    get_fecha_hora();
-    set_alarma();
-    apagar_telit();
-  }
 
   if (tipoSensor == 2)
   {
@@ -870,102 +870,107 @@ void sensor_SDI12(void)
 /*-------------------------- FUNCIONES SENSOR LIMNIMÉTRICO OTT -----------------------*/
 void sensor_OTT(void)
 {
-  //  Watchdog.reset();
-  //  //Timer1.restart();
-  //  x_final = 0;
-  //  y_final = 0;
-  //  int k = 32;
-  //  int d = 5;
-  //
-  //  for (int i = 0; i < k; i++)
-  //  {
-  //    x_final += analogRead(OTTa);
-  //    y_final += analogRead(OTTb);
-  //  }
-  //  x_final = x_final / k;
-  //  y_final = y_final / k;
-  //
-  //  if (((x_final - x_inicial) < d) && ((x_final - x_inicial) > -d))
-  //  {
-  //    x_final = x_inicial;
-  //  }
-  //  if (((y_final - y_inicial) < d) && ((y_final - y_inicial) > -d))
-  //  {
-  //    y_final = y_inicial;
-  //  }
-  //
-  //  if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) > 0))
-  //  {
-  //    cuadrante_final = 1;
-  //  }
-  //  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) > 0))
-  //  {
-  //    cuadrante_final = 2;
-  //  }
-  //  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) < 0))
-  //  {
-  //    cuadrante_final = 3;
-  //  }
-  //  else if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) < -0))
-  //  {
-  //    cuadrante_final = 4;
-  //  }
-  //  else
-  //  {
-  //    cuadrante_final = cuadrante_final;
-  //  }
-  //
-  //  switch (cuadrante_inicial)
-  //  {
-  //    case 1: if (cuadrante_final == 2)
-  //      {
-  //        valorSensor += 55;
-  //      }
-  //      else if (cuadrante_final == 4)
-  //      {
-  //        valorSensor -= 55;
-  //      }
-  //      break;
-  //    case 2: if (cuadrante_final == 3)
-  //      {
-  //        valorSensor += 55;
-  //      }
-  //      else if (cuadrante_final == 1)
-  //      {
-  //        valorSensor -= 55;
-  //      }
-  //      break;
-  //    case 3: if (cuadrante_final == 4)
-  //      {
-  //        valorSensor += 55;
-  //      }
-  //      else if (cuadrante_final == 2)
-  //      {
-  //        valorSensor -= 55;
-  //      }
-  //      break;
-  //    case 4: if (cuadrante_final == 1)
-  //      {
-  //        valorSensor += 55;
-  //      }
-  //      else if (cuadrante_final == 3)
-  //      {
-  //        valorSensor -= 55;
-  //      }
-  //      break;
-  //  }
-  //
-  //  x_inicial = x_final;
-  //  y_inicial = y_final;
-  //  cuadrante_inicial = cuadrante_final;
-  //
-  //  //Serial.print(x_final);
-  //  //Serial.print("\t");
-  //  //Serial.print(y_final);
-  //  //Serial.print("\t");
-  //  //Serial.print(cuadrante_final);
-  //  //Serial.print("\t");
-  //  //Serial.println(valorSensor);
+  Watchdog.reset();
+  int x_final = 0;
+  int y_final = 0;
+  const int k = 32;
+  const int d = 10;
+  float valorSensorTemp = (valorSensor.toInt()*1000.00);
+  const int delta_cuadrante = 55;
+  
+  for (int i = 0; i < k; i++)
+  {
+    x_final += analogRead(A3);
+    y_final += analogRead(A4);
+  }
+  x_final /= k;
+  y_final /= k;
+
+  if (((x_final - x_inicial) < d) && ((x_final - x_inicial) > -d))
+  {
+    x_final = x_inicial;
+  }
+  if (((y_final - y_inicial) < d) && ((y_final - y_inicial) > -d))
+  {
+    y_final = y_inicial;
+  }
+
+  if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) > 0))
+  {
+    cuadrante_final = 100;
+  }
+  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) > 0))
+  {
+    cuadrante_final = 200;
+  }
+  else if (((x_inicial - x_final) < 0) && ((y_inicial - y_final) < 0))
+  {
+    cuadrante_final = 300;
+  }
+  else if (((x_inicial - x_final) > 0) && ((y_inicial - y_final) < -0))
+  {
+    cuadrante_final = 400;
+  }
+  else
+  {
+    cuadrante_final = cuadrante_final;
+  }
+
+  switch (cuadrante_inicial)
+  {
+    case 100: if (cuadrante_final == 200)
+      {
+        valorSensorTemp += delta_cuadrante;
+      }
+      else if (cuadrante_final == 400)
+      {
+        valorSensorTemp -= delta_cuadrante;
+      }
+      break;
+    case 200: if (cuadrante_final == 300)
+      {
+        valorSensorTemp += delta_cuadrante;
+      }
+      else if (cuadrante_final == 100)
+      {
+        valorSensorTemp -= delta_cuadrante;
+      }
+      break;
+    case 300: if (cuadrante_final == 400)
+      {
+        valorSensorTemp += delta_cuadrante;
+      }
+      else if (cuadrante_final == 200)
+      {
+        valorSensorTemp -= delta_cuadrante;
+      }
+      break;
+    case 400: if (cuadrante_final == 100)
+      {
+        valorSensorTemp += delta_cuadrante;
+      }
+      else if (cuadrante_final == 300)
+      {
+        valorSensorTemp -= delta_cuadrante;
+      }
+      break;
+  }
+ 
+  valorSensor = String(valorSensorTemp/1000.00);
+  x_inicial = x_final;
+  y_inicial = y_final;
+  cuadrante_inicial = cuadrante_final;
+
+  Serial.print(x_final);
+  Serial.print("\t");
+  Serial.print(y_final);
+  Serial.print("\t");
+  Serial.print(cuadrante_final);
+  Serial.print("\t");
+  Serial.print(valorSensorTemp);
+  Serial.print("\t");
+  Serial.println(valorSensor);
+
   return;
 }
 /*------------------------ FIN FUNCIONES SENSOR LIMNIMÉTRICO OTT ---------------------*/

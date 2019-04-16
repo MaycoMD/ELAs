@@ -91,7 +91,6 @@ void loop()
   //comandoAT("ATQ1","OK",10);
   //comandoAT("AT#MWI=0","OK",10);
   comandoAT("AT+CSDF=1,2", "OK", 10);
-  //comandoAT("AT+CCLK=\"2019/02/27,15:04:00+00\"", "OK", 10);
   comandoAT("AT+CSQ", "OK", 10);
   comandoAT("AT#SMSMODE=1", "OK", 10);
   comandoAT("AT+CSDH=0", "OK", 10);
@@ -104,9 +103,9 @@ void loop()
     com.concat(char(26));
     comandoAT(com, "+CMGS", 1);
   }
-  comandoAT("AT#USERID=\"clarogprs\"", "OK", 10); //PERSONAL: gprs - CLARO: clarogprs
-  comandoAT("AT#PASSW=\"clarogprs999\"", "OK", 10);  //PERSONAL: gprs - CLARO: clarogprs999
-  comandoAT("AT+CGDCONT=1,\"IP\",\"igprs.claro.com.ar\"", "OK", 10); //PERSONAL: gprs.personal.com - CLARO: igprs.claro.com.ar
+  comandoAT("AT#USERID=\"gprs\"", "OK", 10); //PERSONAL: gprs - CLARO: clarogprs
+  comandoAT("AT#PASSW=\"gprs\"", "OK", 10);  //PERSONAL: gprs - CLARO: clarogprs999
+  comandoAT("AT+CGDCONT=1,\"IP\",\"gprs.personal.com\"", "OK", 10); //PERSONAL: gprs.personal.com - CLARO: igprs.claro.com.ar
   comandoAT("AT#E2SMSRI=1150", "OK", 10); // 0 -> disabled, 50-1150 (ms) enabled
   comandoAT("AT+CNMI=1,1,0,0,0", "OK", 10);
   comandoAT("AT&P0", "OK", 10);
