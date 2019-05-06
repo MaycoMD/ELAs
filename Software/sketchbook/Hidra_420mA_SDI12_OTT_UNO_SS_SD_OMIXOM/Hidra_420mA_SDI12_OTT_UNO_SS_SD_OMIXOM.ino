@@ -460,18 +460,38 @@ bool conexion_ftp()
   }
   return false;
 }
+//bool conexion_http()
+//{
+//  if (comandoAT("AT#HTTPCFG=1,\"www.new.omixom.com/weatherstation\",8001,0,,,1,120,1", "OK", 10))
+//  {
+//    return true;
+//  }
+//  return false;
+//}
 //---------------------------------------------------------------------------------------
 bool enviar_datos(void)
 {
-  String datos;
-  datos.concat(fechaYhora.substring(0, 16));
-  datos.concat(",");
+  fechaYhora.replace("/", "-");
+  fechaYhora.replace(",", "\20");
+
+  String datos = "ID=";
+  datos.concat(ID);
+  datos.concat("&nivel_rio=");
   datos.concat(valorSensor);
-  datos.concat(",");
+  datos.concat("&nivel_bat=");
   datos.concat(valorTension);
-  datos.concat(",");
-  datos.concat(valorSenial);
+  datos.concat("&dateutc=");
+  datos.concat(fechaYhora.substring(0, 19));
   datos.concat("\r");
+
+  //  datos.concat(fechaYhora.substring(0, 16));
+  //  datos.concat(",");
+  //  datos.concat(valorSensor);
+  //  datos.concat(",");
+  //  datos.concat(valorTension);
+  //  datos.concat(",");
+  //  datos.concat(valorSenial);
+  //  datos.concat("\r");
   String largo = String(datos.length());
 
   if (comandoAT("AT#FTPAPPEXT=" + largo + ",1", ">", 1))
