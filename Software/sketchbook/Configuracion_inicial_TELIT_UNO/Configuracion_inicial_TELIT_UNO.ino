@@ -80,55 +80,78 @@ void setup()
 void loop()
 {
   comandoAT("AT", "OK", 10);
-  comandoAT("ATE0", "OK", 10);
-  comandoAT("AT+CFUN=1", "OK", 10);
-  comandoAT("AT&K0", "OK", 10);
-  comandoAT("ATV1", "OK", 10);
-  comandoAT("AT#SELINT=2", "OK", 10);
-  comandoAT("AT+GMI", "OK", 10);
-  comandoAT("AT+GMM", "OK", 10);
-  comandoAT("AT+GMR", "OK", 10);
+//  comandoAT("ATE0", "OK", 10);
+//  comandoAT("AT+CFUN=1", "OK", 10);
+//  comandoAT("AT&K0", "OK", 10);
+//  comandoAT("ATV1", "OK", 10);
+//  comandoAT("AT#SELINT=2", "OK", 10);
+//  comandoAT("AT+GMI", "OK", 10);
+//  comandoAT("AT+GMM", "OK", 10);
+//  comandoAT("AT+GMR", "OK", 10);
   //comandoAT("ATQ1","OK",10);
   //comandoAT("AT#MWI=0","OK",10);
   comandoAT("AT+CSDF=1,2", "OK", 10);
   comandoAT("AT+CSQ", "OK", 10);
-  comandoAT("AT#SMSMODE=1", "OK", 10);
-  comandoAT("AT+CSDH=0", "OK", 10);
-  comandoAT("AT+CMGF=1", "OK", 10);
-  comandoAT("AT+CMGL", "OK", 10);
-  comandoAT("AT+CMGD=4", "OK", 10);
-  if (comandoAT("AT+CMGS=\"3513420474\",129", ">", 1))
+
+  // --------- SMS ----------
+  //  comandoAT("AT#SMSMODE=1", "OK", 10);
+  //  comandoAT("AT+CSDH=0", "OK", 10);
+  //  comandoAT("AT+CMGF=1", "OK", 10);
+  //  comandoAT("AT+CMGL", "OK", 10);
+  //  comandoAT("AT+CMGD=4", "OK", 10);
+  //  if (comandoAT("AT+CMGS=\"3513420474\",129", ">", 1))
+  //  {
+  //    String com = "SMS de prueba";
+  //    com.concat(char(26));
+  //    comandoAT(com, "+CMGS", 1);
+  //  }
+
+  // ----------- PERSONAL ------------
+  comandoAT("AT#USERID=\"gprs\"", "OK", 10);
+  comandoAT("AT#PASSW=\"gprs\"", "OK", 10);
+  comandoAT("AT+CGDCONT=1,\"IP\",\"gprs.personal.com\"", "OK", 10);
+
+  // ------------ CLARO --------------
+  //comandoAT("AT#USERID=\"clarogprs\"", "OK", 10);
+  //comandoAT("AT#PASSW=\"clarogprs999\"", "OK", 10);
+  //comandoAT("AT+CGDCONT=1,\"IP\",\"igprs.claro.com.ar\"", "OK", 10);
+
+//  comandoAT("AT#E2SMSRI=1150", "OK", 10); // 0 -> disabled, 50-1150 (ms) enabled
+//  comandoAT("AT+CNMI=1,1,0,0,0", "OK", 10);
+//  comandoAT("AT&P0", "OK", 10);
+//  comandoAT("AT&W0", "OK", 10);
+  do
   {
-    String com = "SMS de prueba";
-    com.concat(char(26));
-    comandoAT(com, "+CMGS", 1);
+    comandoAT("AT+CSQ", "OK", 10);
   }
-  comandoAT("AT#USERID=\"gprs\"", "OK", 10); //PERSONAL: gprs - CLARO: clarogprs
-  comandoAT("AT#PASSW=\"gprs\"", "OK", 10);  //PERSONAL: gprs - CLARO: clarogprs999
-  comandoAT("AT+CGDCONT=1,\"IP\",\"gprs.personal.com\"", "OK", 10); //PERSONAL: gprs.personal.com - CLARO: igprs.claro.com.ar
-  comandoAT("AT#E2SMSRI=1150", "OK", 10); // 0 -> disabled, 50-1150 (ms) enabled
-  comandoAT("AT+CNMI=1,1,0,0,0", "OK", 10);
-  comandoAT("AT&P0", "OK", 10);
-  comandoAT("AT&W0", "OK", 10);
-  comandoAT("AT+CSQ", "OK", 10);
-  if (comandoAT("AT#GPRS=1", "OK", 10))
+  while(respuesta.indexOf("99")!=-1);
+  
+  if (comandoAT("AT#GPRS=1", "OK", 100))
   {
-    if (comandoAT("AT#FTPTO=5000", "OK", 10))
+    // ----------- CONEXIÓN FTP ------------
+    //    if (comandoAT("AT#FTPTO=5000", "OK", 10))
+    //    {
+    //      if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10))
+    //      {
+    //        if (comandoAT("AT#FTPTYPE=1", "OK", 10))
+    //        {
+    //          if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
+    //          {
+    //            if (comandoAT("AT#FTPAPPEXT=21,1", ">", 1))
+    //            {
+    //              comandoAT("Transmision de prueba", "OK", 1);
+    //            }
+    //          }
+    //        }
+    //        comandoAT("AT#FTPCLOSE", "OK", 10);
+    //      }
+    //    }
+
+    // ---------- CONEXIÓN HTTP -----------
+    if (comandoAT("AT#HTTPCFG=1,\"www.new.omixom.com/weatherstation\",8001,0,,,1,120,1", "OK", 10))
     {
-      if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10))
-      {
-        if (comandoAT("AT#FTPTYPE=1", "OK", 10))
-        {
-          if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
-          {
-            if (comandoAT("AT#FTPAPPEXT=21,1", ">", 1))
-            {
-              comandoAT("Transmision de prueba", "OK", 1);
-            }
-          }
-        }
-        comandoAT("AT#FTPCLOSE", "OK", 10);
-      }
+      comandoAT("AT#HTTPQRY=?","OK",10);
+      comandoAT("AT#HTTPQRY=0,0,\"/updateweatherstation.jsp?ID=60002&PASSWORD=vwrnlDhZtz&senial=20&nivel_rio=16&nivel_bat=12&dateutc=2019-05-06%2016:20:24&version1.0&action=updateraw\"", "RING", 10);
     }
     comandoAT("AT#GPRS=0", "OK", 10);
   }
@@ -138,8 +161,6 @@ void loop()
 
 bool comandoAT(String comando, char resp[3], byte contador)
 {
-//  Watchdog.enable(8000);
-//  Watchdog.reset();
   mySerial.begin(9600);
   char c;
   respuesta = "ERROR";
@@ -151,15 +172,12 @@ bool comandoAT(String comando, char resp[3], byte contador)
 
   while ((respuesta.indexOf(resp) == -1) && (contador != 0))
   {
-    delay(1000);
+    delay(500);
     respuesta = "";
     contador--;
     mySerial.flush();
-    //mySerial.print('\b');
     mySerial.println(comando);
     Serial.print(comando);
-//    Watchdog.reset();
-//    timerFlag = false;
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
       do
@@ -174,6 +192,11 @@ bool comandoAT(String comando, char resp[3], byte contador)
       while (c != LF);
     }
     Serial.println(respuesta);
+  }
+  
+  while (mySerial.available() > 0)
+  {
+    char basura = mySerial.read();
   }
   mySerial.flush();
   mySerial.end();

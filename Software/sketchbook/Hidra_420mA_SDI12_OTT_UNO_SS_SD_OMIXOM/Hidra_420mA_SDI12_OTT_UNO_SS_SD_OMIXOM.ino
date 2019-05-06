@@ -149,28 +149,28 @@ void setup()
   iniciar_SD();
   terminar_SD();
 
-    if (reset_telit())
+  if (reset_telit())
+  {
+    if (leer_sms())
     {
-      if (leer_sms())
+      borrar_sms();
+      switch (tipoSensor)
       {
-        borrar_sms();
-        switch (tipoSensor)
-        {
-          case 0: sensor_420ma();
-            break;
-          case 1: sensor_SDI12();
-            break;
-          default: break;
-        }
-        sensor_bateria();
-        get_fecha_hora();
-        get_senial();
-        enviar_sms();
+        case 0: sensor_420ma();
+          break;
+        case 1: sensor_SDI12();
+          break;
+        default: break;
       }
+      sensor_bateria();
       get_fecha_hora();
-      set_alarma();
-      apagar_telit();
+      get_senial();
+      enviar_sms();
     }
+    get_fecha_hora();
+    set_alarma();
+    apagar_telit();
+  }
 
   if (tipoSensor == 2)
   {
@@ -312,7 +312,7 @@ bool comandoAT(String comando, char resp[3], byte contador)
 
   while ((respuesta.indexOf(resp) == -1) && (contador != 0))
   {
-    delay(1000);
+    delay(500);
     respuesta = "";
     contador--;
     mySerial.flush();
@@ -333,6 +333,11 @@ bool comandoAT(String comando, char resp[3], byte contador)
       while (c != LF);
     }
     Serial.println(respuesta);
+  }
+
+  while (mySerial.available() > 0)
+  {
+    char basura = mySerial.read();
   }
   mySerial.flush();
   mySerial.end();
@@ -361,7 +366,7 @@ bool comandoATnoWDT(String comando, char resp[3], byte contador)
 
   while ((respuesta.indexOf(resp) == -1) && (contador != 0))
   {
-    delay(1000);
+    delay(500);
     respuesta = "";
     contador--;
     mySerial.flush();
@@ -381,6 +386,11 @@ bool comandoATnoWDT(String comando, char resp[3], byte contador)
       while (c != LF);
     }
     Serial.println(respuesta);
+  }
+
+  while (mySerial.available() > 0)
+  {
+    char basura = mySerial.read();
   }
   mySerial.flush();
   mySerial.end();
@@ -875,9 +885,9 @@ void sensor_OTT(void)
   int y_final = 0;
   const int k = 32;
   const int d = 10;
-  float valorSensorTemp = (valorSensor.toInt()*1000.00);
+  float valorSensorTemp = (valorSensor.toInt() * 1000.00);
   const int delta_cuadrante = 55;
-  
+
   for (int i = 0; i < k; i++)
   {
     x_final += analogRead(A3);
@@ -955,8 +965,8 @@ void sensor_OTT(void)
       }
       break;
   }
- 
-  valorSensor = String(valorSensorTemp/1000.00);
+
+  valorSensor = String(valorSensorTemp / 1000.00);
   x_inicial = x_final;
   y_inicial = y_final;
   cuadrante_inicial = cuadrante_final;
