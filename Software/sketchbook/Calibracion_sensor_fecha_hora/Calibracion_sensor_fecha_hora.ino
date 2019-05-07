@@ -36,21 +36,25 @@
 // 13 -> SD_CLK
 // 14 -> GND
 
-#define pMIN 0
-#define pMAX 5
-#define pM 10
-#define pB 15
-#define pFREC 20
+#define pID 0
+#define pFREC 5
+#define pMAXT 10
+#define pMIN 15
+#define pMAX 20
+#define pM 25
+#define pB 30
 
 // MAPEO EEPROM
-// 0 -> Minimo
-// 5 -> Maximo
-// 10 -> Pendiente (m)
-// 15 -> Ordenada al origen (b)
-// 20 -> Frecuencia de transmisión
+// 0 -> ID
+// 5 -> Frecuecia de transmisión
+// 10 -> Valor Máximo a medir
+// 15 -> Minimo (calibración)
+// 20 -> Maximo (calibración)
+// 25 -> Pendiente (m)
+// 30 -> Ordenada al origen (b)
 
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
-#define delaySensor 10                 // pre-calentamiento del sensor (en segundos)
+#define delaySensor 60                 // pre-calentamiento del sensor (en segundos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -68,8 +72,9 @@
 #define LF 10
 #define CR 13
 
-int frecuencia;
-float valorMax = 10000.0;
+unsigned int ID;
+unsigned int frecuencia;
+float valorMaxTotal;
 float valorSensorMax;
 float valorSensorMin;
 float m = 0.0;
@@ -82,13 +87,6 @@ String valorSenial;
 volatile bool interrupcion = false;
 volatile bool timerInt = false;
 String respuesta = "";
-
-unsigned int cuadrante_inicial;  // definiciones de variables
-unsigned int cuadrante_final;    // utilizadas con el sensor
-unsigned int x_inicial = 0;      // limnimétrico a flotador
-unsigned int y_inicial = 0;      // OTT
-unsigned int x_final;
-unsigned int y_final;
 
 SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
 SDI12 mySDI12(SDIpin);
@@ -123,6 +121,16 @@ void setup()
   delay(1000);
 
   Serial.println();
+  EEPROM.get(pID, ID);
+  Serial.print("Identificador de la estacion: ");
+  Serial.println(ID);
+  EEPROM.get(pFREC, frecuencia);
+  Serial.print("Frecuencia de transmision: ");
+  Serial.print(frecuencia);
+  Serial.println(" minutos");
+  EEPROM.get(pMAXT, valorMaxTotal);
+  Serial.print("Valor maximo total: ");
+  Serial.println(valorMaxTotal);
   EEPROM.get(pMIN, valorSensorMin);
   Serial.print("Valor minimo del sensor: ");
   Serial.println(valorSensorMin);
@@ -135,12 +143,11 @@ void setup()
   EEPROM.get(pB, b);
   Serial.print("Ordenada al origen: ");
   Serial.println(b);
-  EEPROM.get(pFREC, frecuencia);
-  Serial.print("Frecuencia de transmision: ");
-  Serial.print(frecuencia);
-  Serial.println(" minutos");
+  Serial.println();
 
+  cambiar_id();
   cambiar_frecuencia();
+  cambiar_maxtotal();
 
   if (encender_sensor())
   {
@@ -162,6 +169,16 @@ void setup()
   }
 
   Serial.println();
+  EEPROM.get(pID, ID);
+  Serial.print("Identificador de la estacion: ");
+  Serial.println(ID);
+  EEPROM.get(pFREC, frecuencia);
+  Serial.print("Frecuencia de transmision: ");
+  Serial.print(frecuencia);
+  Serial.println(" minutos");
+  EEPROM.get(pMAXT, valorMaxTotal);
+  Serial.print("Valor maximo total: ");
+  Serial.println(valorMaxTotal);
   EEPROM.get(pMIN, valorSensorMin);
   Serial.print("Valor minimo del sensor: ");
   Serial.println(valorSensorMin);
@@ -174,10 +191,6 @@ void setup()
   EEPROM.get(pB, b);
   Serial.print("Ordenada al origen: ");
   Serial.println(b);
-  EEPROM.get(pFREC, frecuencia);
-  Serial.print("Frecuencia de transmision: ");
-  Serial.print(frecuencia);
-  Serial.println(" minutos");
   Serial.println();
 }
 /*--------------------- FIN CONFIGURACIONES INICIALES --------------------------------*/
@@ -214,6 +227,39 @@ void loop()
   Serial.println(valorSensor);
 }
 //---------------------------------------------------------------------------------------
+void cambiar_id()
+{
+  bool n = 1;
+  delay(1000);
+  respuesta = "";
+  Serial.println();
+  while (n)
+  {
+    Serial.print("Modificar identificador? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      Serial.println();
+      Serial.setTimeout(20000);
+      Serial.print("Introduzca el nuevo identificador de la estacion: ");
+      respuesta = Serial.readStringUntil(CR);
+      Serial.println();
+      ID = int(respuesta.toInt());
+      Serial.print("Identificador: ");
+      Serial.println(ID);
+      EEPROM.put(pID,ID);
+      Serial.println("Almacenado en EEPROM");
+      return;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return;
+    }
+  }
+}
+//---------------------------------------------------------------------------------------
 void cambiar_frecuencia()
 {
   bool n = 1;
@@ -227,7 +273,6 @@ void cambiar_frecuencia()
     Serial.println();
     if (respuesta.indexOf("s") != -1)
     {
-      frecuencia = "";
       Serial.println();
       Serial.setTimeout(20000);
       Serial.print("Introduzca la nueva frecuencia (en minutos): ");
@@ -248,6 +293,39 @@ void cambiar_frecuencia()
   }
 }
 //---------------------------------------------------------------------------------------
+void cambiar_maxtotal()
+{
+  bool n = 1;
+  delay(1000);
+  respuesta = "";
+  Serial.println();
+  while (n)
+  {
+    Serial.print("Modificar distancia maxima? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      Serial.println();
+      Serial.setTimeout(20000);
+      Serial.print("Introduzca la nueva distancia maxima (en milimetros): ");
+      respuesta = Serial.readStringUntil(CR);
+      Serial.println();
+      valorMaxTotal = int(respuesta.toInt());
+      Serial.print("Distancia maxima: ");
+      Serial.println(valorMaxTotal);
+      EEPROM.put(pMAXT, valorMaxTotal);
+      Serial.println("Almacenado en EEPROM");
+      return;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return;
+    }
+  }
+}
+//---------------------------------------------------------------------------
 bool encender_sensor()
 {
   bool n = 1;
@@ -357,7 +435,7 @@ void calibracion_sensor_420ma(void)
   Serial.println("Almacenado en EEPROM");
   Serial.println();
 
-  m = valorMax / (valorSensorMax - valorSensorMin);
+  m = valorMaxTotal / (valorSensorMax - valorSensorMin);
   Serial.print("Pendiente: ");
   Serial.println(m);
   EEPROM.put(pM, m);
@@ -505,7 +583,7 @@ void set_fecha_hora(void)
     fechaYhora = "";
     Serial.println();
     Serial.setTimeout(20000);
-    Serial.print("Introduzca la fecha y hora en formato <aaaa/mm/dd,hh:mm:ss>: ");
+    Serial.print("Introduzca la fecha y hora en formato <aaaa/mm/dd,hh:mm:ss> (UTC-00): ");
     fechaYhora = Serial.readStringUntil(CR);
     Serial.println();
     comandoAT("AT+CCLK=\"" + fechaYhora + "+00\"", "OK", 10);
