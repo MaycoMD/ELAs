@@ -53,6 +53,7 @@
 #define pMAX 20
 #define pM 25
 #define pB 30
+#define pDELAY 35
 
 // MAPEO EEPROM
 // 0 -> ID
@@ -62,12 +63,10 @@
 // 20 -> Maximo (calibración)
 // 25 -> Pendiente (m)
 // 30 -> Ordenada al origen (b)
+// 35 -> Precalentamiento del sensor (delaySensor)
 
+//============================ ESTACIONES ============================
 
-//======================== CONFIGURACIONES SENSORES ========================
-#define delaySensor 5        // pre-calentamiento del sensor (en segundos)
-
-// ESTACIONES
 // ELR02 -> Inriville
 // ELR03 -> Piedras Blancas
 // ELR04 -> Alpa Corral
@@ -82,6 +81,7 @@ String fechaYhora = "";
 String valorSenial = "";
 volatile bool rtcFlag = false;
 String respuesta = "";
+String datos = "";
 
 //=============================== PROGRAMA ==================================
 /*---------------------------- CONFIGURACIONES INICIALES -----------------------------*/
@@ -173,7 +173,7 @@ void loop()
       reset_telit();
       get_fecha_hora();
       //sensor_420ma();
-      sensor_bateria();
+      //sensor_bateria();
       get_senial();
 
       if (conexion_gprs())
@@ -286,27 +286,25 @@ bool comandoAT(String comando, char resp[3], byte contador)
   }
 }
 //--------------------------------------------------------------------------------------
-bool comandoATnoWDT(String comando, char resp[5], byte contador)
+bool comandoATnoWDT(char resp[5], byte contador)
 {
   Watchdog.disable();
   SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
   mySerial.begin(9600);
   char c;
   respuesta = "ERROR";
-
   while (mySerial.available() > 0)
   {
     char basura = mySerial.read();
   }
-
   while ((respuesta.indexOf(resp) == -1) && (contador != 0))
   {
     delay(500);
     respuesta = "";
     contador--;
     mySerial.flush();
-    mySerial.println(comando);
-    Serial.print(comando);
+    mySerial.println(datos);
+    Serial.print(datos);
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
       do
@@ -323,7 +321,6 @@ bool comandoATnoWDT(String comando, char resp[5], byte contador)
     }
     Serial.println(respuesta);
   }
-
   while (mySerial.available() > 0)
   {
     char basura = mySerial.read();
@@ -373,7 +370,9 @@ bool conexion_gprs(void)
 {
   if (comandoAT("AT#GPRS=0", "OK", 10))
   {
-    if (comandoATnoWDT("AT#GPRS=1", "OK", 10))
+    datos = "";
+    datos = "AT#GPRS=1";
+    if (comandoATnoWDT("OK", 25))
     {
       return true;
     }
@@ -383,70 +382,59 @@ bool conexion_gprs(void)
 //---------------------------------------------------------------------------------------
 bool enviar_datos(void)
 {
-  String datos = "";
+  if (iniciar_SD())
+  {
+    File dataFile;
+    dataFile = SD.open("datos", FILE_READ);
+    if (dataFile)
+    {
+      while (dataFile.available())
+      {
+        char c = dataFile.read();      
+        if (c == 'A')
+        {
+          datos = "";
+          while (c != '\r')
+          {
+            datos.concat(c);
+            c = dataFile.read();
+          }
+          comandoATnoWDT("RING", 10);
+        }
+      }
+      dataFile.close();
+      SD.remove("datos");
+    }
+    terminar_SD();
+  }
 
-  //  if (iniciar_SD())
-  //  {
-  //    File dataFile;
-  //    bool fileFlag = true;
-  //    while (fileFlag);
-  //    {
-  //dataFile.openNextFile();
-  //if (dataFile)
-  //{
-  //char c;
-  //String fileName = dataFile.name();
-  //      else
-  //     {
-  //        while (dataFile.available())
-  //        {
-  //          c = dataFile.read();
-  //          datos.concat(c);
-  //        }
-  //        if (comandoAT(datos, "RING", 10))
-  //        {
-  //dataFile.close();
-  //          SD.remove(fileName);
-  //        }
-  //      }
-  //}
-  //      else
-  //      {
-  //        fileFlag = false;
-  //      }
-  //    }
-  //    datos = "";
-  //    terminar_SD();
-  //  }
-
+  datos = "";
   unsigned int ID;
   EEPROM.get(pID, ID);
-
   fechaYhora.replace("/", "-");
   fechaYhora.replace(",", "%20");
-  fechaYhora = fechaYhora.substring(0, 21);
 
   datos = "AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=";
   datos.concat(ID);
   datos.concat("&PASSWORD=vwrnlDhZtz&senial=");
   datos.concat(valorSenial);
-  datos.concat("&nivel_rio=6.5");
-  //datos.concat(valorSensor);
+  datos.concat("&nivel_rio=");
+  datos.concat(valorSensor);
   datos.concat("&nivel_bat=");
   datos.concat(valorTension);
   datos.concat("&dateutc=");
   datos.concat(fechaYhora);
   datos.concat("\"");
 
-  if (comandoATnoWDT(datos, "RING", 10))
+  if (comandoATnoWDT("RING", 10))
   {
-    return true;
+    if (respuesta.indexOf("201") != -1)
+    {
+      return true;
+    }
   }
-  else
-  {
-    guardar_datos(datos);
-    return false;
-  }
+  guardar_datos();
+  return false;
 }
 //---------------------------------------------------------------------------------------
 bool desconexion_gprs(void)
@@ -634,6 +622,8 @@ void sensor_420ma(void)
   EEPROM.get(pB, b);
   int frecuencia;
   EEPROM.get(pFREC, frecuencia);
+  byte delaySensor;
+  EEPROM.get(pDELAY, delaySensor);
 
   if (frecuencia > 5)
   {
@@ -689,18 +679,20 @@ void sensor_bateria()
 
 
 /*----------------------------- FUNCIONES TARJETA SD ---------------------------------*/
-bool guardar_datos(String datos)
+bool guardar_datos()
 {
   Watchdog.reset();
   bool flag = false;
   File dataFile;
   if (iniciar_SD())
   {
-    dataFile = SD.open(fechaYhora, FILE_WRITE);
+    dataFile = SD.open("datos", FILE_WRITE);
     if (dataFile)
     {
       dataFile.print(datos);
+      dataFile.print("\r");
       flag = true;
+      Serial.println("Archivo guardado");
     }
     dataFile.close();
   }

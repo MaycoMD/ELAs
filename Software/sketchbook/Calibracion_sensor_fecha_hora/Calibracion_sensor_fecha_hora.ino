@@ -43,6 +43,7 @@
 #define pMAX 20
 #define pM 25
 #define pB 30
+#define pDELAY 35
 
 // MAPEO EEPROM
 // 0 -> ID
@@ -52,9 +53,7 @@
 // 20 -> Maximo (calibración)
 // 25 -> Pendiente (m)
 // 30 -> Ordenada al origen (b)
-
-#define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
-#define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
+// 35 -> Precalentamiento (delaySensor)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -74,6 +73,7 @@
 
 unsigned int ID;
 unsigned int frecuencia;
+byte delaySensor;
 float valorMaxTotal;
 float valorSensorMax;
 float valorSensorMin;
@@ -84,8 +84,6 @@ float valorSensorTemp;
 float valorTension = 0.0;
 String fechaYhora;
 String valorSenial;
-volatile bool interrupcion = false;
-volatile bool timerInt = false;
 String respuesta = "";
 
 SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
@@ -131,6 +129,10 @@ void setup()
   EEPROM.get(pMAXT, valorMaxTotal);
   Serial.print("Valor maximo total: ");
   Serial.println(valorMaxTotal);
+  EEPROM.get(pDELAY, delaySensor );
+  Serial.print("Pre-calentamiento del sensor: ");
+  Serial.print(delaySensor);
+  Serial.println(" segundos");
   EEPROM.get(pMIN, valorSensorMin);
   Serial.print("Valor minimo del sensor: ");
   Serial.println(valorSensorMin);
@@ -148,6 +150,7 @@ void setup()
   cambiar_id();
   cambiar_frecuencia();
   cambiar_maxtotal();
+  cambiar_delay();
 
   if (encender_sensor())
   {
@@ -179,6 +182,10 @@ void setup()
   EEPROM.get(pMAXT, valorMaxTotal);
   Serial.print("Valor maximo total: ");
   Serial.println(valorMaxTotal);
+  EEPROM.get(pDELAY, delaySensor );
+  Serial.print("Pre-calentamiento del sensor: ");
+  Serial.print(delaySensor);
+  Serial.println(" segundos");
   EEPROM.get(pMIN, valorSensorMin);
   Serial.print("Valor minimo del sensor: ");
   Serial.println(valorSensorMin);
@@ -326,6 +333,40 @@ void cambiar_maxtotal()
   }
 }
 //---------------------------------------------------------------------------
+void cambiar_delay()
+{
+  bool n = 1;
+  delay(1000);
+  respuesta = "";
+  Serial.println();
+  while (n)
+  {
+    Serial.print("Modificar precalentamiento? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      Serial.println();
+      Serial.setTimeout(20000);
+      Serial.print("Introduzca el nuevo tiempo de espera para el inicio del sensor (en segundos): ");
+      respuesta = Serial.readStringUntil(CR);
+      Serial.println();
+      delaySensor = int(respuesta.toInt());
+      Serial.print("Precalentamiento: ");
+      Serial.print(delaySensor);
+      Serial.println(" segundos");
+      EEPROM.put(pDELAY, delaySensor);
+      Serial.println("Almacenado en EEPROM");
+      return;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return;
+    }
+  }
+}
+//------------------------------------------------------------------------
 bool encender_sensor()
 {
   bool n = 1;
