@@ -92,7 +92,7 @@ void loop()
   //comandoAT("AT#MWI=0","OK",10);
   comandoAT("AT+CSDF=1,2", "OK", 10);
   comandoAT("AT+CSQ", "OK", 10);
-  comandoAT("AT+CALA=\"19:30:00+00\",0,4,,\"0\",0", "OK", 10);
+  //comandoAT("AT+CALA=\"19:30:00+00\",0,4,,\"0\",0", "OK", 10);
 
   // --------- SMS ----------
   comandoAT("AT#SMSMODE=1", "OK", 10);
@@ -151,7 +151,7 @@ void loop()
     // ---------- CONEXIÓN HTTP -----------
     comandoAT("AT#HTTPCFG=0,\"new.omixom.com\",8001,0,,,0,120,1", "OK", 10);
     //comandoAT("AT#HTTPQRY=?", "OK", 10);
-    comandoAT("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=60002&PASSWORD=vwrnlDhZtz&senial=25&nivel_rio=6&nivel_bat=12&dateutc=2019-05-07%2019:10:00\"", "RING", 10); // Máx. 150 caracteres
+    comandoAT("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=60002&PASSWORD=vwrnlDhZtz&senial=25&nivel_rio=6&nivel_bat=12&dateutc=2019-05-07%2021:40:00\"", "RING", 10); // Máx. 150 caracteres
   }
   comandoAT("AT#GPRS=0", "OK", 10);
   comandoAT("AT#SYSHALT", "OK", 10);

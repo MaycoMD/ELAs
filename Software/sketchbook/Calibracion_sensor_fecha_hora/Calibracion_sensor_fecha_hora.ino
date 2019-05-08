@@ -54,7 +54,7 @@
 // 30 -> Ordenada al origen (b)
 
 #define tipoSensor 0                  // tipo de sensor a utilizar (0~3)
-#define delaySensor 60                 // pre-calentamiento del sensor (en segundos)
+#define delaySensor 5                 // pre-calentamiento del sensor (en segundos)
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -248,7 +248,7 @@ void cambiar_id()
       ID = int(respuesta.toInt());
       Serial.print("Identificador: ");
       Serial.println(ID);
-      EEPROM.put(pID,ID);
+      EEPROM.put(pID, ID);
       Serial.println("Almacenado en EEPROM");
       return;
     }
@@ -479,7 +479,7 @@ bool encender_telit()
 }
 //---------------------------------------------------------------------------------------
 
-bool comandoAT(String comando, char resp[3], byte contador)
+bool comandoAT(String comando, char resp[5], byte contador)
 {
   mySerial.begin(9600);
   char c;
@@ -503,6 +503,7 @@ bool comandoAT(String comando, char resp[3], byte contador)
       do
       {
         c = LF;
+        delay(20);
         if (mySerial.available())
         {
           c = mySerial.read();
@@ -512,6 +513,11 @@ bool comandoAT(String comando, char resp[3], byte contador)
       while (c != LF);
     }
     Serial.println(respuesta);
+  }
+
+  while (mySerial.available() > 0)
+  {
+    char basura = mySerial.read();
   }
   mySerial.flush();
   mySerial.end();
