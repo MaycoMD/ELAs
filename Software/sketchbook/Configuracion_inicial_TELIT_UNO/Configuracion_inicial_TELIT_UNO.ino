@@ -80,14 +80,14 @@ void setup()
 void loop()
 {
   comandoAT("AT", "OK", 10);
-  //  comandoAT("ATE0", "OK", 10);
-  //  comandoAT("AT+CFUN=1", "OK", 10);
-  //  comandoAT("AT&K0", "OK", 10);
-  //  comandoAT("ATV1", "OK", 10);
-  //  comandoAT("AT#SELINT=2", "OK", 10);
-  //  comandoAT("AT+GMI", "OK", 10);
-  //  comandoAT("AT+GMM", "OK", 10);
-  //  comandoAT("AT+GMR", "OK", 10);
+  comandoAT("ATE0", "OK", 10);
+  comandoAT("AT+CFUN=1", "OK", 10);
+  comandoAT("AT&K0", "OK", 10);
+  comandoAT("ATV1", "OK", 10);
+  comandoAT("AT#SELINT=2", "OK", 10);
+  comandoAT("AT+GMI", "OK", 10);
+  comandoAT("AT+GMM", "OK", 10);
+  comandoAT("AT+GMR", "OK", 10);
   //comandoAT("ATQ1","OK",10);
   //comandoAT("AT#MWI=0","OK",10);
   comandoAT("AT+CSDF=1,2", "OK", 10);
@@ -100,12 +100,12 @@ void loop()
   comandoAT("AT+CMGF=1", "OK", 10);
   comandoAT("AT+CMGL", "OK", 10);
   comandoAT("AT+CMGD=4", "OK", 10);
-  //  if (comandoAT("AT+CMGS=\"3513420474\",129", ">", 1))
-  //  {
-  //    String com = "SMS de prueba";
-  //    com.concat(char(26));
-  //    comandoAT(com, "+CMGS", 1);
-  //  }
+  if (comandoAT("AT+CMGS=\"3513420474\",129", ">", 1))
+  {
+    String com = "SMS de prueba";
+    com.concat(char(26));
+    comandoAT(com, "+CMGS", 1);
+  }
 
   // ----------- PERSONAL ------------
   comandoAT("AT#USERID=\"gprs\"", "OK", 10);
@@ -117,10 +117,10 @@ void loop()
   //comandoAT("AT#PASSW=\"clarogprs999\"", "OK", 10);
   //comandoAT("AT+CGDCONT=1,\"IP\",\"igprs.claro.com.ar\"", "OK", 10);
 
-  //  comandoAT("AT#E2SMSRI=1150", "OK", 10); // 0 -> disabled, 50-1150 (ms) enabled
-  //  comandoAT("AT+CNMI=1,1,0,0,0", "OK", 10);
-  //  comandoAT("AT&P0", "OK", 10);
-  //  comandoAT("AT&W0", "OK", 10);
+  comandoAT("AT#E2SMSRI=1150", "OK", 10); // 0 -> disabled, 50-1150 (ms) enabled
+  comandoAT("AT+CNMI=1,1,0,0,0", "OK", 10);
+  comandoAT("AT&P0", "OK", 10);
+  comandoAT("AT&W0", "OK", 10);
   do
   {
     comandoAT("AT+CSQ", "OK", 10);
@@ -130,23 +130,23 @@ void loop()
   if (comandoAT("AT#GPRS=1", "OK", 100))
   {
     // ----------- CONEXIÓN FTP ------------
-    //        if (comandoAT("AT#FTPTO=5000", "OK", 10))
-    //        {
-    //          if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10))
-    //          {
-    //            if (comandoAT("AT#FTPTYPE=1", "OK", 10))
-    //            {
-    //              if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
-    //              {
-    //                if (comandoAT("AT#FTPAPPEXT=21,1", ">", 1))
-    //                {
-    //                  comandoAT("Transmision de prueba", "OK", 1);
-    //                }
-    //              }
-    //            }
-    //            comandoAT("AT#FTPCLOSE", "OK", 10);
-    //          }
-    //        }
+    if (comandoAT("AT#FTPTO=5000", "OK", 10))
+    {
+      if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10))
+      {
+        if (comandoAT("AT#FTPTYPE=1", "OK", 10))
+        {
+          if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
+          {
+            if (comandoAT("AT#FTPAPPEXT=21,1", ">", 1))
+            {
+              comandoAT("Transmision de prueba", "OK", 1);
+            }
+          }
+        }
+        comandoAT("AT#FTPCLOSE", "OK", 10);
+      }
+    }
 
     // ---------- CONEXIÓN HTTP -----------
     comandoAT("AT#HTTPCFG=0,\"new.omixom.com\",8001,0,,,0,120,1", "OK", 10);

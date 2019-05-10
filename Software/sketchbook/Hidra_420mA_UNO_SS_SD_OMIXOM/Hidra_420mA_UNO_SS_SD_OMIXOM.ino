@@ -81,7 +81,7 @@ String fechaYhora = "";
 String valorSenial = "";
 volatile bool rtcFlag = false;
 String respuesta = "";
-String datos = "";
+String comando = "";
 
 //=============================== PROGRAMA ==================================
 /*---------------------------- CONFIGURACIONES INICIALES -----------------------------*/
@@ -172,8 +172,8 @@ void loop()
       digitalWrite(LEDpin, LOW);
       reset_telit();
       get_fecha_hora();
-      //sensor_420ma();
-      //sensor_bateria();
+      sensor_420ma();
+      sensor_bateria();
       get_senial();
 
       if (conexion_gprs())
@@ -229,7 +229,7 @@ void SMSint()
 
 /*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
 
-bool comandoAT(String comando, char resp[3], byte contador)
+bool comandoAT(char resp[3], byte contador)
 {
   Watchdog.enable(8000);
   Watchdog.reset();
@@ -303,8 +303,8 @@ bool comandoATnoWDT(char resp[5], byte contador)
     respuesta = "";
     contador--;
     mySerial.flush();
-    mySerial.println(datos);
-    Serial.print(datos);
+    mySerial.println(comando);
+    Serial.print(comando);
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
       do
@@ -351,13 +351,16 @@ bool reset_telit(void)
   digitalWrite(RSTpin, LOW);
   delay(5000);
   Watchdog.reset();
-  if (comandoAT("AT", "OK", 10))
+  comando = "AT";
+  if (comandoAT("OK", 10))
   {
     delay(2000);
-    if (comandoAT("AT+CFUN=1", "OK", 10))
+    comando = "AT+CFUN=1";
+    if (comandoAT("OK", 10))
     {
       delay(2000);
-      if (comandoAT("AT+CSDF=1,2", "OK", 10))
+      comando = "AT+CSDF=1,2";
+      if (comandoAT("OK", 10))
       {
         return true;
       }
@@ -368,11 +371,11 @@ bool reset_telit(void)
 //---------------------------------------------------------------------------------------
 bool conexion_gprs(void)
 {
-  if (comandoAT("AT#GPRS=0", "OK", 10))
+  comando = "AT#GPRS=0";
+  if (comandoAT("OK", 10))
   {
-    datos = "";
-    datos = "AT#GPRS=1";
-    if (comandoATnoWDT("OK", 25))
+    comando = "AT#GPRS=1";
+    if (comandoATnoWDT("OK", 10))
     {
       return true;
     }
@@ -384,49 +387,62 @@ bool enviar_datos(void)
 {
   if (iniciar_SD())
   {
-    File dataFile;
-    dataFile = SD.open("datos", FILE_READ);
-    if (dataFile)
+    if (SD.exists("datos"))
     {
-      while (dataFile.available())
+      File dataFile;
+      dataFile = SD.open("datos", FILE_READ);
+      if (dataFile)
       {
-        char c = dataFile.read();      
-        if (c == 'A')
+        bool flag = true;
+        while (dataFile.available() && flag)
         {
-          datos = "";
-          while (c != '\r')
+          char c = dataFile.read();
+          if (c == 'A')
           {
-            datos.concat(c);
-            c = dataFile.read();
+            comando = "";
+            while (c != '\r')
+            {
+              comando.concat(c);
+              c = dataFile.read();
+            }
+            if (comandoAT("RING", 10))
+            {
+              if (respuesta.indexOf("201") == -1)
+              {
+                flag = false;
+              }
+            }
           }
-          comandoATnoWDT("RING", 10);
+        }
+        if (flag == true)
+        {
+          dataFile.close();
+          SD.remove("datos");
         }
       }
-      dataFile.close();
-      SD.remove("datos");
     }
     terminar_SD();
   }
 
-  datos = "";
+  comando = "";
   unsigned int ID;
   EEPROM.get(pID, ID);
   fechaYhora.replace("/", "-");
   fechaYhora.replace(",", "%20");
 
-  datos = "AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=";
-  datos.concat(ID);
-  datos.concat("&PASSWORD=vwrnlDhZtz&senial=");
-  datos.concat(valorSenial);
-  datos.concat("&nivel_rio=");
-  datos.concat(valorSensor);
-  datos.concat("&nivel_bat=");
-  datos.concat(valorTension);
-  datos.concat("&dateutc=");
-  datos.concat(fechaYhora);
-  datos.concat("\"");
+  comando = "AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=";
+  comando.concat(ID);
+  comando.concat("&PASSWORD=vwrnlDhZtz&senial=");
+  comando.concat(valorSenial);
+  comando.concat("&nivel_rio=");
+  comando.concat(valorSensor);
+  comando.concat("&nivel_bat=");
+  comando.concat(valorTension);
+  comando.concat("&dateutc=");
+  comando.concat(fechaYhora);
+  comando.concat("\"");
 
-  if (comandoATnoWDT("RING", 10))
+  if (comandoAT("RING", 10))
   {
     if (respuesta.indexOf("201") != -1)
     {
@@ -439,7 +455,8 @@ bool enviar_datos(void)
 //---------------------------------------------------------------------------------------
 bool desconexion_gprs(void)
 {
-  if (comandoAT("AT#GPRS=0", "OK", 10));
+  comando = "AT#GPRS=0";
+  if (comandoAT("OK", 10));
   {
     return true;
   }
@@ -450,7 +467,8 @@ bool desconexion_gprs(void)
 //el módulo GSM
 bool apagar_telit(void)
 {
-  if (comandoAT("AT+CFUN=0,0", "OK", 10))
+  comando = "AT+CFUN=0,0";
+  if (comandoAT("OK", 10))
   {
     return true;
   }
@@ -461,7 +479,8 @@ bool apagar_telit(void)
 //fechaYhora.
 bool get_fecha_hora(void)
 {
-  if (comandoAT("AT+CCLK?", "OK", 10))
+  comando = "AT+CCLK?";
+  if (comandoAT("OK", 10))
   {
     fechaYhora = respuesta.substring(10, 29);
     return true;
@@ -529,13 +548,19 @@ void set_alarma(void)
     strHora_temp = String(hora);
     strHora += strHora_temp;
   }
-  comandoAT("AT+CALA=\"" + strHora + ":" + strMinutos + ":00+00\",0,4,,\"0\",0", "OK", 10);
+  comando = "AT+CALA=\"";
+  comando.concat(strHora);
+  comando.concat(":");
+  comando.concat(strMinutos);
+  comando.concat(":00+00\",0,4,,\"0\",0");
+  comandoAT("OK", 10);
   return;
 }
 //--------------------------------------------------------------------------------------
 void get_senial(void)
 {
-  if (comandoAT("AT+CSQ", "OK", 10))
+  comando = "AT+CSQ";
+  if (comandoAT("OK", 10))
   {
     int index1 = respuesta.indexOf(":");
     int index2 = respuesta.indexOf(",");
@@ -547,8 +572,12 @@ void get_senial(void)
 //--------------------------------------------------------------------------------------
 bool leer_sms()
 {
-  comandoAT("AT+CSDH=0", "OK", 10);
-  if (comandoAT("AT+CMGL", "OK", 10))
+  comando = "AT+CMGF=1";
+  comandoAT("OK", 10);
+  comando = "AT+CSDH=0";
+  comandoAT("OK", 10);
+  comando = "AT+CMGL";
+  if (comandoAT("OK", 10))
   {
     if (respuesta.length() > 10)
     {
@@ -561,37 +590,45 @@ bool leer_sms()
         frecuencia = int(respuesta.toInt());
         EEPROM.put(pFREC, frecuencia);
       }
+      index1 = respuesta.indexOf("<id=");
+      if (index1 != -1)
+      {
+        int id;
+        int index2 = respuesta.indexOf(">");
+        respuesta = respuesta.substring(index1 + 4, index2);
+        id = int(respuesta.toInt());
+        EEPROM.put(pID, id);
+      }
       return true;
     }
-    else
-    {
-      return false;
-    }
   }
+  return false;
 }
 //--------------------------------------------------------------------------------------
 bool enviar_sms(void)
 {
-  if (comandoAT("AT+CMGF=1", "OK", 1))
+  comando = "AT+CMGF=1";
+  if (comandoAT("OK", 1))
   {
-    if (comandoAT("AT+CMGS=\"3513420474\",129", ">", 1))
+    comando = "AT+CMGS=\"3513420474\",129";
+    if (comandoAT(">", 1))
     {
       unsigned int ID;
       EEPROM.get(pID, ID);
 
-      String datos = "";
-      datos.concat(ID);
-      datos.concat("\r");
-      datos.concat(fechaYhora);
-      datos.concat("\r");
-      datos.concat(valorSensor);
-      datos.concat("\r");
-      datos.concat(valorTension);
-      datos.concat("\r");
-      datos.concat(valorSenial);
-      datos.concat(char(26));
+      comando = "";
+      comando.concat(ID);
+      comando.concat("\r");
+      comando.concat(fechaYhora);
+      comando.concat("\r");
+      comando.concat(valorSensor);
+      comando.concat("\r");
+      comando.concat(valorTension);
+      comando.concat("\r");
+      comando.concat(valorSenial);
+      comando.concat(char(26));
 
-      if (comandoAT(datos, "+CMGS", 1))
+      if (comandoAT("+CMGS", 1))
       {
         return true;
       }
@@ -602,7 +639,8 @@ bool enviar_sms(void)
 //--------------------------------------------------------------------------------------
 bool borrar_sms(void)
 {
-  if (comandoAT("AT+CMGD=4", "OK", 1))
+  comando = "AT+CMGD=4";
+  if (comandoAT("OK", 1))
   {
     return true;
   }
@@ -689,7 +727,7 @@ bool guardar_datos()
     dataFile = SD.open("datos", FILE_WRITE);
     if (dataFile)
     {
-      dataFile.print(datos);
+      dataFile.print(comando);
       dataFile.print("\r");
       flag = true;
       Serial.println("Archivo guardado");
