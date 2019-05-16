@@ -425,13 +425,13 @@ bool enviar_datos(void)
   }
 
   comando = "";
-  unsigned int ID;
-  EEPROM.get(pID, ID);
+  unsigned long id;
+  EEPROM.get(pID, id);
   fechaYhora.replace("/", "-");
   fechaYhora.replace(",", "%20");
 
   comando = "AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=";
-  comando.concat(ID);
+  comando.concat(id);
   comando.concat("&PASSWORD=vwrnlDhZtz&senial=");
   comando.concat(valorSenial);
   comando.concat("&nivel_rio=");
@@ -593,10 +593,10 @@ bool leer_sms()
       index1 = respuesta.indexOf("<id=");
       if (index1 != -1)
       {
-        int id;
+        unsigned long id;
         int index2 = respuesta.indexOf(">");
         respuesta = respuesta.substring(index1 + 4, index2);
-        id = int(respuesta.toInt());
+        id = long(respuesta.toInt());
         EEPROM.put(pID, id);
       }
       return true;
@@ -613,11 +613,11 @@ bool enviar_sms(void)
     comando = "AT+CMGS=\"3513420474\",129";
     if (comandoAT(">", 1))
     {
-      unsigned int ID;
-      EEPROM.get(pID, ID);
+      unsigned long id;
+      EEPROM.get(pID, id);
 
       comando = "";
-      comando.concat(ID);
+      comando.concat(id);
       comando.concat("\r");
       comando.concat(fechaYhora);
       comando.concat("\r");

@@ -71,7 +71,7 @@
 #define LF 10
 #define CR 13
 
-unsigned int ID;
+unsigned long ID;
 unsigned int frecuencia;
 byte delaySensor;
 float valorMaxTotal;
@@ -252,7 +252,7 @@ void cambiar_id()
       Serial.print("Introduzca el nuevo identificador de la estacion: ");
       respuesta = Serial.readStringUntil(CR);
       Serial.println();
-      ID = int(respuesta.toInt());
+      ID = long(respuesta.toInt());
       Serial.print("Identificador: ");
       Serial.println(ID);
       EEPROM.put(pID, ID);
