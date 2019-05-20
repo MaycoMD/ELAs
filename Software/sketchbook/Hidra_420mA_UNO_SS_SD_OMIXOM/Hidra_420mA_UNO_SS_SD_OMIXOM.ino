@@ -628,17 +628,29 @@ bool enviar_sms(void)
     {
       unsigned long id;
       EEPROM.get(pID, id);
+      unsigned int frec;
+      EEPROM.get(pFREC,frec);
+      int delaySensor;
+      EEPROM.get(pDELAY,delaySensor);
+      byte tipoSensor;
+      EEPROM.get(pTIPO,tipoSensor);
 
-      comando = "";
+      comando = "ID: ";
       comando.concat(id);
-      comando.concat("\r");
+      comando.concat("\rFecha/hora: ");
       comando.concat(fechaYhora);
-      comando.concat("\r");
+      comando.concat("\rNivel: ");
       comando.concat(valorSensor);
-      comando.concat("\r");
+      comando.concat("\rBateria: ");
       comando.concat(valorTension);
-      comando.concat("\r");
+      comando.concat("\rSenial: ");
       comando.concat(valorSenial);
+      comando.concat("\rFrec: ");
+      comando.concat(frec);
+      comando.concat("\rSensor: ");
+      comando.concat(tipoSensor);
+      comando.concat("\rDelay: ");
+      comando.concat(delaySensor);
       comando.concat(char(26));
 
       if (comandoAT("+CMGS", 1))
