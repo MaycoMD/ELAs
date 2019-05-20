@@ -2,6 +2,7 @@
 #include <Adafruit_SleepyDog.h> // Watchdog Timer
 #include <avr/sleep.h>          // Sleep modes
 #include "SoftwareSerialMod.h"  // Software UART modificada
+#include "SDI12Mod.h"           // SDI-12 modificada
 #include <EEPROM.h>
 #include <SPI.h>
 #include <SD.h>
@@ -10,6 +11,7 @@
 #define VBATpin A0
 #define RELEpin A1
 #define s420 A2
+#define SDIpin A5
 #define SMSRCVpin 2
 #define RTCpin 3
 #define SDCSpin 4
@@ -54,6 +56,7 @@
 #define pM 25
 #define pB 30
 #define pDELAY 35
+#define pTIPO 40
 
 // MAPEO EEPROM
 // 0 -> ID
@@ -64,6 +67,7 @@
 // 25 -> Pendiente (m)
 // 30 -> Ordenada al origen (b)
 // 35 -> Precalentamiento del sensor (delaySensor)
+// 40 -> Tipo de sensor
 
 //============================ ESTACIONES ============================
 
@@ -172,7 +176,16 @@ void loop()
       digitalWrite(LEDpin, LOW);
       reset_telit();
       get_fecha_hora();
-      sensor_420ma();
+      byte tipoSensor;
+      EEPROM.get(pTIPO, tipoSensor);
+      switch (tipoSensor)
+      {
+        case 0: sensor_420ma();
+          break;
+        case 1: sensor_SDI12();
+          break;
+        default: break;
+      }
       sensor_bateria();
       get_senial();
 
@@ -698,6 +711,63 @@ void sensor_420ma(void)
   return;
 }
 /*-------------------------------- FIN SENSOR 4-20mA ---------------------------------*/
+
+
+/*--------------------------------- SENSOR SDI-12 ------------------------------------*/
+void sensor_SDI12(void)
+{
+  byte delaySensor;
+  EEPROM.get(pDELAY, delaySensor);
+  SDI12 mySDI12(SDIpin);
+
+  digitalWrite(RELEpin, HIGH);
+  for (int i = 0; i < delaySensor; i++)
+  {
+    delay(1000);
+  }
+  mySDI12.begin();
+  Watchdog.reset();
+  respuesta = "";
+  delay(1000);
+  mySDI12.sendCommand("0M!");
+  delay(30);
+  while (mySDI12.available())  // build response string
+  {
+    char c = mySDI12.read();
+    if ((c != '\n') && (c != '\r'))
+    {
+      respuesta += c;
+      delay(5);
+    }
+  }
+  mySDI12.clearBuffer();
+  delay(1000);                 // delay between taking reading and requesting data
+  respuesta = "";           // clear the response string
+
+  // next command to request data from last measurement
+  mySDI12.sendCommand("0D0!");
+  delay(30);                     // wait a while for a response
+
+  while (mySDI12.available())
+  { // build string from response
+    char c = mySDI12.read();
+    if ((c != '\n') && (c != '\r')) {
+      respuesta += c;
+      delay(5);
+    }
+  }
+  if (respuesta.length() > 1)
+  {
+    respuesta = respuesta.substring(3, 7);
+    valorSensor = float(respuesta.toInt());
+  }
+  mySDI12.clearBuffer();
+
+  mySDI12.end();
+  digitalWrite(RELEpin, LOW);
+  return;
+}
+/*--------------------------------- FIN SENSOR SDI-12 --------------------------------*/
 
 
 /*-------------------------------- TENSIÓN BATERÍA -----------------------------------*/

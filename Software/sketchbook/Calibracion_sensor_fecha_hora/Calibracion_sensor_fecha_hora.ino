@@ -44,6 +44,7 @@
 #define pM 25
 #define pB 30
 #define pDELAY 35
+#define pTIPO 40
 
 // MAPEO EEPROM
 // 0 -> ID
@@ -54,6 +55,7 @@
 // 25 -> Pendiente (m)
 // 30 -> Ordenada al origen (b)
 // 35 -> Precalentamiento (delaySensor)
+// 40 -> Tipo de sensor 
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -74,6 +76,7 @@
 unsigned long ID;
 unsigned int frecuencia;
 byte delaySensor;
+byte tipoSensor;
 float valorMaxTotal;
 float valorSensorMax;
 float valorSensorMin;
@@ -126,6 +129,9 @@ void setup()
   Serial.print("Frecuencia de transmision: ");
   Serial.print(frecuencia);
   Serial.println(" minutos");
+  EEPROM.get(pTIPO, tipoSensor);
+  Serial.print("ITipo de sensor: ");
+  Serial.println(tipoSensor);
   EEPROM.get(pMAXT, valorMaxTotal);
   Serial.print("Valor maximo total: ");
   Serial.println(valorMaxTotal);
@@ -149,6 +155,7 @@ void setup()
 
   cambiar_id();
   cambiar_frecuencia();
+  cambiar_tipo_sensor();
   cambiar_maxtotal();
   cambiar_delay();
 
@@ -179,6 +186,9 @@ void setup()
   Serial.print("Frecuencia de transmision: ");
   Serial.print(frecuencia);
   Serial.println(" minutos");
+  EEPROM.get(pTIPO, tipoSensor);
+  Serial.print("ITipo de sensor: ");
+  Serial.println(tipoSensor);
   EEPROM.get(pMAXT, valorMaxTotal);
   Serial.print("Valor maximo total: ");
   Serial.println(valorMaxTotal);
@@ -299,6 +309,41 @@ void cambiar_frecuencia()
     }
   }
 }
+//-------------------------------------------------------------------------------------
+void cambiar_tipo_sensor()
+{
+  bool n = 1;
+  delay(1000);
+  respuesta = "";
+  Serial.println();
+  while (n)
+  {
+    Serial.print("Cambiar tipo de sensor? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      Serial.println();
+      Serial.setTimeout(20000);
+      Serial.println("0 -> 4-20 mA");
+      Serial.println("1 -> SDI-12");
+      Serial.print("Introduzca el nuevo tipo de sensor: ");
+      respuesta = Serial.readStringUntil(CR);
+      Serial.println();
+      tipoSensor = int(respuesta.toInt());
+      Serial.print("Tipo de sensor: ");
+      Serial.println(tipoSensor);
+      EEPROM.put(pTIPO, tipoSensor);
+      Serial.println("Almacenado en EEPROM");
+      return;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return;
+    }
+  }
+}
 //---------------------------------------------------------------------------------------
 void cambiar_maxtotal()
 {
@@ -383,7 +428,10 @@ bool encender_sensor()
       n = 0;
       Serial.println("Iniciando sensor... ");
       digitalWrite(RELEpin, HIGH);
-      delay(delaySensor * 1000);
+      for (int i = 0; i < delaySensor; i++)
+      {
+        delay(1000);
+      }
       Serial.println("Sensor encendido");
       return true;
     }
