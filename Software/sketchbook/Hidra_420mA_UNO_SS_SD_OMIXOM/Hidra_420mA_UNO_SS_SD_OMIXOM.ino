@@ -134,15 +134,24 @@ void setup()
 
   if (reset_telit())
   {
-    if (leer_sms())
+    //if (leer_sms())
     {
-      borrar_sms();
-      sensor_420ma();
+      byte tipoSensor;
+      EEPROM.get(pTIPO, tipoSensor);
+      switch (tipoSensor)
+      {
+        case 0: sensor_420ma();
+          break;
+        case 1: sensor_SDI12();
+          break;
+        default: break;
+      }
       sensor_bateria();
       get_fecha_hora();
       get_senial();
       enviar_sms();
     }
+    borrar_sms();
     get_fecha_hora();
     set_alarma();
     apagar_telit();
@@ -194,6 +203,10 @@ void loop()
         enviar_datos();
         desconexion_gprs();
       }
+      else
+      {
+        guardar_datos();
+      }
 
       get_fecha_hora();
       set_alarma();
@@ -213,7 +226,7 @@ void loop()
 // Rutina de interrupción por la alarma programada en el RTC del módulo Telit
 void RTCint()
 {
-  sleep_disable(); //fully awake now
+  sleep_disable();
   detachInterrupt(digitalPinToInterrupt(RTCpin));
   Watchdog.reset();
   delayMicroseconds(10000);
@@ -388,7 +401,7 @@ bool conexion_gprs(void)
   if (comandoAT("OK", 10))
   {
     comando = "AT#GPRS=1";
-    if (comandoATnoWDT("OK", 10))
+    if (comandoATnoWDT("OK", 20))
     {
       return true;
     }
@@ -418,7 +431,7 @@ bool enviar_datos(void)
               comando.concat(c);
               c = dataFile.read();
             }
-            if (comandoAT("RING", 10))
+            if (comandoAT("RING", 1))
             {
               if (respuesta.indexOf("201") == -1)
               {
@@ -440,6 +453,7 @@ bool enviar_datos(void)
   comando = "";
   unsigned long id;
   EEPROM.get(pID, id);
+  
   fechaYhora.replace("/", "-");
   fechaYhora.replace(",", "%20");
 
@@ -455,7 +469,7 @@ bool enviar_datos(void)
   comando.concat(fechaYhora);
   comando.concat("\"");
 
-  if (comandoAT("RING", 10))
+  if (comandoAT("RING", 1))
   {
     if (respuesta.indexOf("201") != -1)
     {
@@ -587,10 +601,8 @@ bool leer_sms()
 {
   comando = "AT+CMGF=1";
   comandoAT("OK", 10);
-  comando = "AT+CSDH=0";
-  comandoAT("OK", 10);
   comando = "AT+CMGL";
-  if (comandoAT("OK", 10))
+  if (comandoATnoWDT("OK", 10))
   {
     if (respuesta.length() > 10)
     {
@@ -629,11 +641,11 @@ bool enviar_sms(void)
       unsigned long id;
       EEPROM.get(pID, id);
       unsigned int frec;
-      EEPROM.get(pFREC,frec);
+      EEPROM.get(pFREC, frec);
       int delaySensor;
-      EEPROM.get(pDELAY,delaySensor);
+      EEPROM.get(pDELAY, delaySensor);
       byte tipoSensor;
-      EEPROM.get(pTIPO,tipoSensor);
+      EEPROM.get(pTIPO, tipoSensor);
 
       comando = "ID: ";
       comando.concat(id);
@@ -664,7 +676,7 @@ bool enviar_sms(void)
 //--------------------------------------------------------------------------------------
 bool borrar_sms(void)
 {
-  comando = "AT+CMGD=4";
+  comando = "AT+CMGD=1,4";
   if (comandoAT("OK", 1))
   {
     return true;
@@ -678,7 +690,6 @@ bool borrar_sms(void)
 void sensor_420ma(void)
 {
   Watchdog.disable();
-
   float m;
   EEPROM.get(pM, m);
   float b;
@@ -711,7 +722,7 @@ void sensor_420ma(void)
   }
   else if (valorSensor < 0.01)
   {
-    valorSensor = -1;
+    valorSensor = -1.00;
   }
 
   if (frecuencia > 5)
@@ -743,7 +754,7 @@ void sensor_SDI12(void)
   delay(1000);
   mySDI12.sendCommand("0M!");
   delay(30);
-  while (mySDI12.available())  // build response string
+  while (mySDI12.available())
   {
     char c = mySDI12.read();
     if ((c != '\n') && (c != '\r'))
@@ -753,15 +764,14 @@ void sensor_SDI12(void)
     }
   }
   mySDI12.clearBuffer();
-  delay(1000);                 // delay between taking reading and requesting data
-  respuesta = "";           // clear the response string
+  delay(1000);
+  respuesta = "";
 
-  // next command to request data from last measurement
   mySDI12.sendCommand("0D0!");
-  delay(30);                     // wait a while for a response
+  delay(30);
 
   while (mySDI12.available())
-  { // build string from response
+  {
     char c = mySDI12.read();
     if ((c != '\n') && (c != '\r')) {
       respuesta += c;
@@ -770,8 +780,9 @@ void sensor_SDI12(void)
   }
   if (respuesta.length() > 1)
   {
-    respuesta = respuesta.substring(3, 7);
-    valorSensor = float(respuesta.toInt());
+    int index = respuesta.indexOf('.');
+    respuesta = respuesta.substring(3, index+3);
+    valorSensor = respuesta.toFloat();
   }
   mySDI12.clearBuffer();
 
@@ -804,6 +815,24 @@ bool guardar_datos()
   Watchdog.reset();
   bool flag = false;
   File dataFile;
+  comando = "";
+  unsigned long id;
+  EEPROM.get(pID, id);
+  
+  fechaYhora.replace("/", "-");
+  fechaYhora.replace(",", "%20");
+  comando = "AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=";
+  comando.concat(id);
+  comando.concat("&PASSWORD=vwrnlDhZtz&senial=");
+  comando.concat(valorSenial);
+  comando.concat("&nivel_rio=");
+  comando.concat(valorSensor);
+  comando.concat("&nivel_bat=");
+  comando.concat(valorTension);
+  comando.concat("&dateutc=");
+  comando.concat(fechaYhora);
+  comando.concat("\"");
+  
   if (iniciar_SD())
   {
     dataFile = SD.open("datos", FILE_WRITE);

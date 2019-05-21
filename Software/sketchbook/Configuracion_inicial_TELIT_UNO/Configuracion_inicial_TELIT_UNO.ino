@@ -96,10 +96,11 @@ void loop()
 
   // --------- SMS ----------
   comandoAT("AT#SMSMODE=1", "OK", 10);
-  comandoAT("AT+CSDH=0", "OK", 10);
+  comandoAT("AT+CPMS=\"SM\",\"SM\",\"SM\"","OK",10);
   comandoAT("AT+CMGF=1", "OK", 10);
+  comandoAT("AT+CSDH=0", "OK", 10);
   comandoAT("AT+CMGL", "OK", 10);
-  comandoAT("AT+CMGD=4", "OK", 10);
+  comandoAT("AT+CMGD=1,4", "OK", 10);
   if (comandoAT("AT+CMGS=\"3513420474\",129", ">", 1))
   {
     String com = "SMS de prueba";
@@ -130,28 +131,28 @@ void loop()
   if (comandoAT("AT#GPRS=1", "OK", 100))
   {
     // ----------- CONEXIÓN FTP ------------
-    if (comandoAT("AT#FTPTO=5000", "OK", 10))
-    {
-      if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10))
-      {
-        if (comandoAT("AT#FTPTYPE=1", "OK", 10))
-        {
-          if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
-          {
-            if (comandoAT("AT#FTPAPPEXT=21,1", ">", 1))
-            {
-              comandoAT("Transmision de prueba", "OK", 1);
-            }
-          }
-        }
-        comandoAT("AT#FTPCLOSE", "OK", 10);
-      }
-    }
+//    if (comandoAT("AT#FTPTO=5000", "OK", 10))
+//    {
+//      if (comandoAT("AT#FTPOPEN=\"200.16.30.250\",\"estaciones\",\"es2016$..\",1", "OK", 10))
+//      {
+//        if (comandoAT("AT#FTPTYPE=1", "OK", 10))
+//        {
+//          if (comandoAT("AT#FTPAPP=\"" + ID + "/datos\",1", "OK", 10))
+//          {
+//            if (comandoAT("AT#FTPAPPEXT=21,1", ">", 1))
+//            {
+//              comandoAT("Transmision de prueba", "OK", 1);
+//            }
+//          }
+//        }
+//        comandoAT("AT#FTPCLOSE", "OK", 10);
+//      }
+//    }
 
     // ---------- CONEXIÓN HTTP -----------
     comandoAT("AT#HTTPCFG=0,\"new.omixom.com\",8001,0,,,0,120,1", "OK", 10);
     //comandoAT("AT#HTTPQRY=?", "OK", 10);
-    comandoAT("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=60002&PASSWORD=vwrnlDhZtz&senial=25&nivel_rio=6&nivel_bat=12&dateutc=2019-05-07%2021:40:00\"", "RING", 10); // Máx. 150 caracteres
+    comandoAT("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=70003&PASSWORD=vwrnlDhZtz&senial=25&nivel_rio=6&nivel_bat=12&dateutc=2019-05-07%2021:40:00\"", "RING", 10); // Máx. 150 caracteres
   }
   comandoAT("AT#GPRS=0", "OK", 10);
   comandoAT("AT#SYSHALT", "OK", 10);

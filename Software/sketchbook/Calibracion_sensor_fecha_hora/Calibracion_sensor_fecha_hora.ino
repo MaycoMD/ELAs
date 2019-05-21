@@ -130,7 +130,7 @@ void setup()
   Serial.print(frecuencia);
   Serial.println(" minutos");
   EEPROM.get(pTIPO, tipoSensor);
-  Serial.print("ITipo de sensor: ");
+  Serial.print("Tipo de sensor: ");
   Serial.println(tipoSensor);
   EEPROM.get(pMAXT, valorMaxTotal);
   Serial.print("Valor maximo total: ");
@@ -187,7 +187,7 @@ void setup()
   Serial.print(frecuencia);
   Serial.println(" minutos");
   EEPROM.get(pTIPO, tipoSensor);
-  Serial.print("ITipo de sensor: ");
+  Serial.print("Tipo de sensor: ");
   Serial.println(tipoSensor);
   EEPROM.get(pMAXT, valorMaxTotal);
   Serial.print("Valor maximo total: ");
@@ -214,7 +214,10 @@ void setup()
 void loop()
 {
   digitalWrite(RELEpin, HIGH);
-  delay(delaySensor * 1000);
+  for(int i=0;i<delaySensor;i++)
+  {
+    delay(1000);
+  }
   valorSensorTemp = 0.0;
   for (int i = 0; i < 64; i++)
   {
