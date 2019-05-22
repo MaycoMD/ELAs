@@ -134,18 +134,9 @@ void setup()
 
   if (reset_telit())
   {
-    //if (leer_sms())
+    if (leer_sms())
     {
-      byte tipoSensor;
-      EEPROM.get(pTIPO, tipoSensor);
-      switch (tipoSensor)
-      {
-        case 0: sensor_420ma();
-          break;
-        case 1: sensor_SDI12();
-          break;
-        default: break;
-      }
+      sensor_420ma();
       sensor_bateria();
       get_fecha_hora();
       get_senial();
@@ -185,16 +176,7 @@ void loop()
       digitalWrite(LEDpin, LOW);
       reset_telit();
       get_fecha_hora();
-      byte tipoSensor;
-      EEPROM.get(pTIPO, tipoSensor);
-      switch (tipoSensor)
-      {
-        case 0: sensor_420ma();
-          break;
-        case 1: sensor_SDI12();
-          break;
-        default: break;
-      }
+      sensor_420ma();
       sensor_bateria();
       get_senial();
 
@@ -325,7 +307,7 @@ bool comandoATnoWDT(char resp[5], byte contador)
   }
   while ((respuesta.indexOf(resp) == -1) && (contador != 0))
   {
-    delay(500);
+    delay(5000);
     respuesta = "";
     contador--;
     mySerial.flush();
@@ -734,63 +716,6 @@ void sensor_420ma(void)
   return;
 }
 /*-------------------------------- FIN SENSOR 4-20mA ---------------------------------*/
-
-
-/*--------------------------------- SENSOR SDI-12 ------------------------------------*/
-void sensor_SDI12(void)
-{
-  byte delaySensor;
-  EEPROM.get(pDELAY, delaySensor);
-  SDI12 mySDI12(SDIpin);
-
-  digitalWrite(RELEpin, HIGH);
-  for (int i = 0; i < delaySensor; i++)
-  {
-    delay(1000);
-  }
-  mySDI12.begin();
-  Watchdog.reset();
-  respuesta = "";
-  delay(1000);
-  mySDI12.sendCommand("0M!");
-  delay(30);
-  while (mySDI12.available())
-  {
-    char c = mySDI12.read();
-    if ((c != '\n') && (c != '\r'))
-    {
-      respuesta += c;
-      delay(5);
-    }
-  }
-  mySDI12.clearBuffer();
-  delay(1000);
-  respuesta = "";
-
-  mySDI12.sendCommand("0D0!");
-  delay(30);
-
-  while (mySDI12.available())
-  {
-    char c = mySDI12.read();
-    if ((c != '\n') && (c != '\r')) {
-      respuesta += c;
-      delay(5);
-    }
-  }
-  if (respuesta.length() > 1)
-  {
-    int index = respuesta.indexOf('.');
-    respuesta = respuesta.substring(3, index+3);
-    valorSensor = respuesta.toFloat();
-  }
-  mySDI12.clearBuffer();
-
-  mySDI12.end();
-  digitalWrite(RELEpin, LOW);
-  return;
-}
-/*--------------------------------- FIN SENSOR SDI-12 --------------------------------*/
 
 
 /*-------------------------------- TENSIÓN BATERÍA -----------------------------------*/
