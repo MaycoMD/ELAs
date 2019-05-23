@@ -78,7 +78,6 @@
 // ELF02 -> Saladillo
 
 //=============================== VARIABLES ================================
-#define LF 10
 float valorSensor;
 float valorTension;
 String fechaYhora = "";
@@ -121,9 +120,14 @@ void setup()
 
   int frecuencia;
   EEPROM.get(pFREC, frecuencia);
-  if (frecuencia <= 5)
+  byte tipoSensor;
+  EEPROM.get(pTIPO, tipoSensor);
+  if (tipoSensor == 0)
   {
-    digitalWrite(RELEpin, HIGH);
+    if (frecuencia <= 5)
+    {
+      digitalWrite(RELEpin, HIGH);
+    }
   }
 
   attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
@@ -136,7 +140,14 @@ void setup()
   {
     if (leer_sms())
     {
-      sensor_420ma();
+      switch (tipoSensor)
+      {
+        case 0: sensor_420ma();
+          break;
+        case 1: sensor_sdi12();
+          break;
+        default: break;
+      }
       sensor_bateria();
       get_fecha_hora();
       get_senial();
@@ -176,7 +187,16 @@ void loop()
       digitalWrite(LEDpin, LOW);
       reset_telit();
       get_fecha_hora();
-      sensor_420ma();
+      byte tipoSensor;
+      EEPROM.get(pTIPO, tipoSensor);
+      switch (tipoSensor)
+      {
+        case 0: sensor_420ma();
+          break;
+        case 1: sensor_sdi12();
+          break;
+        default: break;
+      }
       sensor_bateria();
       get_senial();
 
@@ -189,7 +209,6 @@ void loop()
       {
         guardar_datos();
       }
-
       get_fecha_hora();
       set_alarma();
       apagar_telit();
@@ -256,23 +275,17 @@ bool comandoAT(char resp[3], byte contador)
     delay(500);
     respuesta = "";
     contador--;
-    mySerial.flush();
-    mySerial.println(comando);
     Serial.print(comando);
+    mySerial.flush();
     Watchdog.reset();
+    mySerial.println(comando);
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
-      do
+      while (mySerial.available())
       {
-        c = LF;
-        delay(20);
-        if (mySerial.available())
-        {
-          c = mySerial.read();
-          respuesta += c;
-        }
+        c = mySerial.read();
+        respuesta += c;
       }
-      while (c != LF);
     }
     Serial.println(respuesta);
   }
@@ -301,34 +314,32 @@ bool comandoATnoWDT(char resp[5], byte contador)
   mySerial.begin(9600);
   char c;
   respuesta = "ERROR";
+
   while (mySerial.available() > 0)
   {
     char basura = mySerial.read();
   }
+
   while ((respuesta.indexOf(resp) == -1) && (contador != 0))
   {
-    delay(5000);
+    delay(500);
     respuesta = "";
     contador--;
-    mySerial.flush();
-    mySerial.println(comando);
     Serial.print(comando);
+    mySerial.flush();
+    Watchdog.reset();
+    mySerial.println(comando);
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
-      do
+      while (mySerial.available())
       {
-        c = LF;
-        delay(20);
-        if (mySerial.available())
-        {
-          c = mySerial.read();
-          respuesta += c;
-        }
+        c = mySerial.read();
+        respuesta += c;
       }
-      while (c != LF);
     }
     Serial.println(respuesta);
   }
+
   while (mySerial.available() > 0)
   {
     char basura = mySerial.read();
@@ -435,7 +446,7 @@ bool enviar_datos(void)
   comando = "";
   unsigned long id;
   EEPROM.get(pID, id);
-  
+
   fechaYhora.replace("/", "-");
   fechaYhora.replace(",", "%20");
 
@@ -583,7 +594,7 @@ bool leer_sms()
 {
   comando = "AT+CMGF=1";
   comandoAT("OK", 10);
-  comando = "AT+CMGL";
+  comando = "AT+CMGR=1";
   if (comandoATnoWDT("OK", 10))
   {
     if (respuesta.length() > 10)
@@ -671,7 +682,7 @@ bool borrar_sms(void)
 /*--------------------------------- SENSOR 4-20mA ------------------------------------*/
 void sensor_420ma(void)
 {
-  Watchdog.disable();
+  Watchdog.reset();
   float m;
   EEPROM.get(pM, m);
   float b;
@@ -686,6 +697,7 @@ void sensor_420ma(void)
     digitalWrite(RELEpin, HIGH);
     for (int i = 0; i < delaySensor; i++)
     {
+      Watchdog.reset();
       delay(1000);
     }
   }
@@ -693,6 +705,7 @@ void sensor_420ma(void)
   for (int i = 0; i < 64; i++)
   {
     valorSensor += analogRead(s420);
+    Watchdog.reset();
     delay(1000);
   }
   valorSensor /= 64.0;
@@ -711,11 +724,73 @@ void sensor_420ma(void)
   {
     digitalWrite(RELEpin, LOW);
   }
-  Watchdog.enable(8000);
   Watchdog.reset();
   return;
 }
 /*-------------------------------- FIN SENSOR 4-20mA ---------------------------------*/
+
+
+/*--------------------------------- SENSOR SDI-12 ------------------------------------*/
+void sensor_sdi12(void)
+{
+  Watchdog.reset();
+  SDI12 mySDI12(SDIpin);
+  int frecuencia;
+  EEPROM.get(pFREC, frecuencia);
+  byte delaySensor;
+  EEPROM.get(pDELAY, delaySensor);
+
+  digitalWrite(RELEpin, HIGH);
+  for (int i = 0; i < delaySensor; i++)
+  {
+    Watchdog.reset();
+    delay(1000);
+  }
+
+  mySDI12.begin();
+  respuesta = "";
+  delay(1000);
+  mySDI12.sendCommand("0M!");
+  delay(30);
+  while (mySDI12.available())  // build response string
+  {
+    char c = mySDI12.read();
+    if ((c != '\n') && (c != '\r'))
+    {
+      respuesta += c;
+      delay(5);
+    }
+  }
+  mySDI12.clearBuffer();
+  delay(1000);
+  respuesta = "";
+
+  mySDI12.sendCommand("0D0!");
+  delay(30);
+
+  while (mySDI12.available())
+  {
+    char c = mySDI12.read();
+    if ((c != '\n') && (c != '\r')) {
+      respuesta += c;
+      delay(5);
+    }
+  }
+  if (respuesta.length() > 1)
+  {
+    int index = respuesta.indexOf('.');
+    respuesta = respuesta.substring(3, index + 3);
+    valorSensor = respuesta.toFloat();
+  }
+  mySDI12.clearBuffer();
+
+  mySDI12.end();
+
+  digitalWrite(RELEpin, LOW);
+  Watchdog.reset();
+  return;
+}
+/*-------------------------------- FIN SENSOR SDI-12 ---------------------------------*/
 
 
 /*-------------------------------- TENSIÓN BATERÍA -----------------------------------*/
@@ -743,7 +818,7 @@ bool guardar_datos()
   comando = "";
   unsigned long id;
   EEPROM.get(pID, id);
-  
+
   fechaYhora.replace("/", "-");
   fechaYhora.replace(",", "%20");
   comando = "AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=";
@@ -757,7 +832,7 @@ bool guardar_datos()
   comando.concat("&dateutc=");
   comando.concat(fechaYhora);
   comando.concat("\"");
-  
+
   if (iniciar_SD())
   {
     dataFile = SD.open("datos", FILE_WRITE);
