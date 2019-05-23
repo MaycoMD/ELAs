@@ -597,30 +597,28 @@ bool leer_sms()
   comando = "AT+CMGR=1";
   if (comandoATnoWDT("OK", 10))
   {
-    if (respuesta.length() > 10)
+    int index1 = respuesta.indexOf("<frec=");
+    if (index1 != -1)
     {
-      int index1 = respuesta.indexOf("<frec=");
-      if (index1 != -1)
-      {
-        int frecuencia;
-        int index2 = respuesta.indexOf(">");
-        respuesta = respuesta.substring(index1 + 6, index2);
-        frecuencia = int(respuesta.toInt());
-        EEPROM.put(pFREC, frecuencia);
-      }
-      index1 = respuesta.indexOf("<id=");
-      if (index1 != -1)
-      {
-        unsigned long id;
-        int index2 = respuesta.indexOf(">");
-        respuesta = respuesta.substring(index1 + 4, index2);
-        id = long(respuesta.toInt());
-        EEPROM.put(pID, id);
-      }
+      int frecuencia;
+      int index2 = respuesta.indexOf(">");
+      respuesta = respuesta.substring(index1 + 6, index2);
+      frecuencia = int(respuesta.toInt());
+      EEPROM.put(pFREC, frecuencia);
       return true;
     }
+    index1 = respuesta.indexOf("<id=");
+    if (index1 != -1)
+    {
+      unsigned long id;
+      int index2 = respuesta.indexOf(">");
+      respuesta = respuesta.substring(index1 + 4, index2);
+      id = long(respuesta.toInt());
+      EEPROM.put(pID, id);
+      return true;
+    }
+    return false;
   }
-  return false;
 }
 //--------------------------------------------------------------------------------------
 bool enviar_sms(void)
