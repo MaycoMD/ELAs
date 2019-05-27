@@ -80,11 +80,11 @@
 //=============================== VARIABLES ================================
 float valorSensor;
 float valorTension;
+byte valorSenial;
 String fechaYhora = "";
-String valorSenial = "";
-volatile bool rtcFlag = false;
 String respuesta = "";
 String comando = "";
+volatile bool rtcFlag = false;
 
 //=============================== PROGRAMA ==================================
 /*---------------------------- CONFIGURACIONES INICIALES -----------------------------*/
@@ -177,6 +177,10 @@ void loop()
   sleep_cpu();
   sleep_disable();
 
+  fechaYhora = "";
+  respuesta = "";
+  comando = "";
+
   if (rtcFlag == true)
   {
     interrupts();
@@ -257,7 +261,7 @@ void SMSint()
 
 /*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
 
-bool comandoAT(char resp[3], byte contador)
+bool comandoAT(char resp[5], byte contador)
 {
   Watchdog.enable(8000);
   Watchdog.reset();
@@ -308,7 +312,7 @@ bool comandoAT(char resp[3], byte contador)
   }
 }
 //--------------------------------------------------------------------------------------
-bool comandoATnoWDT(char resp[5], byte contador)
+bool comandoATnoWDT(char resp[3], byte contador)
 {
   Watchdog.disable();
   SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
@@ -405,41 +409,41 @@ bool conexion_gprs(void)
 //---------------------------------------------------------------------------------------
 bool enviar_datos(void)
 {
-  if (iniciar_SD())
-  {
-    if (SD.exists("datos"))
-    {
-      File dataFile;
-      dataFile = SD.open("datos", FILE_READ);
-      if (dataFile)
-      {
-        bool flag = true;
-        while (dataFile.available() && flag)
-        {
-          char c = dataFile.read();
-          if (c == 'A')
-          {
-            comando = "";
-            while (c != '\r')
-            {
-              comando.concat(c);
-              c = dataFile.read();
-            }
-            if (!comandoAT("201", 1))
-            {
-              flag = false;
-            }
-          }
-        }
-        if (flag == true)
-        {
-          dataFile.close();
-          SD.remove("datos");
-        }
-      }
-    }
-    terminar_SD();
-  }
+  //  if (iniciar_SD())
+  //  {
+  //    if (SD.exists("datos"))
+  //    {
+  //      File dataFile;
+  //      dataFile = SD.open("datos", FILE_READ);
+  //      if (dataFile)
+  //      {
+  //        bool flag = true;
+  //        while (dataFile.available() && flag)
+  //        {
+  //          char c = dataFile.read();
+  //          if (c == 'A')
+  //          {
+  //            comando = "";
+  //            while (c != '\r')
+  //            {
+  //              comando.concat(c);
+  //              c = dataFile.read();
+  //            }
+  //            if (!comandoAT("201", 1))
+  //            {
+  //              flag = false;
+  //            }
+  //          }
+  //        }
+  //        if (flag == true)
+  //        {
+  //          dataFile.close();
+  //          SD.remove("datos");
+  //        }
+  //      }
+  //    }
+  //    terminar_SD();
+  //  }
 
   comando = "";
   unsigned long id;
@@ -533,7 +537,7 @@ void set_alarma(void)
         }
         else
         {
-          strMinutos = String(frecuencia * i);;
+          strMinutos = String(frecuencia * i);
         }
         seteada = 1;
         break;
@@ -574,9 +578,10 @@ void get_senial(void)
   comando = "AT+CSQ";
   if (comandoAT("OK", 10))
   {
-    int index1 = respuesta.indexOf(":");
-    int index2 = respuesta.indexOf(",");
-    valorSenial = respuesta.substring(index1 + 2, index2);
+    byte index1 = respuesta.indexOf(":");
+    byte index2 = respuesta.indexOf(",");
+    respuesta = respuesta.substring(index1 + 2, index2);
+    valorSenial = int(respuesta.toInt());
     return true;
   }
   return false;
@@ -593,33 +598,33 @@ bool leer_sms()
     {
       return true;
     }
-    unsigned int index1 = respuesta.indexOf("<frec=");
+    byte index1 = respuesta.indexOf("<frec=");
     if (index1 != -1)
     {
-      unsigned int frecuencia;
-      unsigned int index2 = respuesta.indexOf(">");
+      byte frecuencia;
+      byte index2 = respuesta.indexOf(">");
       respuesta = respuesta.substring(index1 + 6, index2);
       frecuencia = int(respuesta.toInt());
       EEPROM.put(pFREC, frecuencia);
       return true;
     }
-    
+
     index1 = respuesta.indexOf("<id=");
     if (index1 != -1)
     {
       unsigned long id;
-      unsigned int index2 = respuesta.indexOf(">");
+      byte index2 = respuesta.indexOf(">");
       respuesta = respuesta.substring(index1 + 4, index2);
       id = long(respuesta.toInt());
       EEPROM.put(pID, id);
       return true;
     }
-    
+
     index1 = respuesta.indexOf("<delay=");
     if (index1 != -1)
     {
-      unsigned long delaySensor;
-      unsigned int index2 = respuesta.indexOf(">");
+      byte delaySensor;
+      byte index2 = respuesta.indexOf(">");
       respuesta = respuesta.substring(index1 + 7, index2);
       delaySensor = int(respuesta.toInt());
       EEPROM.put(pDELAY, delaySensor);
@@ -640,7 +645,7 @@ bool enviar_sms(void)
     {
       unsigned long id;
       EEPROM.get(pID, id);
-      unsigned int frec;
+      byte frec;
       EEPROM.get(pFREC, frec);
       byte delaySensor;
       EEPROM.get(pDELAY, delaySensor);
@@ -697,7 +702,7 @@ void sensor_420ma(void)
   EEPROM.get(pM, m);
   float b;
   EEPROM.get(pB, b);
-  int frecuencia;
+  byte frecuencia;
   EEPROM.get(pFREC, frecuencia);
   byte delaySensor;
   EEPROM.get(pDELAY, delaySensor);
@@ -705,14 +710,14 @@ void sensor_420ma(void)
   if (frecuencia > 5)
   {
     digitalWrite(RELEpin, HIGH);
-    for (int i = 0; i < delaySensor; i++)
+    for (byte i = 0; i < delaySensor; i++)
     {
       Watchdog.reset();
       delay(1000);
     }
   }
 
-  for (int i = 0; i < 64; i++)
+  for (byte i = 0; i < 64; i++)
   {
     valorSensor += analogRead(s420);
     Watchdog.reset();
@@ -745,13 +750,13 @@ void sensor_sdi12(void)
 {
   Watchdog.reset();
   SDI12 mySDI12(SDIpin);
-  int frecuencia;
+  byte frecuencia;
   EEPROM.get(pFREC, frecuencia);
   byte delaySensor;
   EEPROM.get(pDELAY, delaySensor);
 
   digitalWrite(RELEpin, HIGH);
-  for (int i = 0; i < delaySensor; i++)
+  for (byte i = 0; i < delaySensor; i++)
   {
     Watchdog.reset();
     delay(1000);
@@ -788,7 +793,7 @@ void sensor_sdi12(void)
   }
   if (respuesta.length() > 1)
   {
-    int index = respuesta.indexOf('.');
+    byte index = respuesta.indexOf('.');
     respuesta = respuesta.substring(3, index + 3);
     valorSensor = respuesta.toFloat();
   }
@@ -807,7 +812,7 @@ void sensor_sdi12(void)
 void sensor_bateria()
 {
   valorTension = 0;
-  for (int i = 0; i < 32; i++)
+  for (byte i = 0; i < 32; i++)
   {
     valorTension += analogRead(VBATpin);
     delay(10);
