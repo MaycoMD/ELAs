@@ -16,23 +16,7 @@
 #define PWRMONpin 11
 #define LEDpin 13
 
-byte tipoSensor = 1;                  // tipo de sensor a utilizar (0~3)
-byte delaySensor = 5;                // pre-calentamiento del sensor (en segundos)
-float valorMax = 10000.0;             // máximo valor a medir por el sensor (en milimetros)
-byte frecuencia = 10;                 // frecuencia de transmisión de los datos (en minutos)
-String ID = "ELA00";                  // Identificador de la estación
-byte maxDatos = 6;                   // Cantidad máxima de datos a almacenar
-byte contDatos = 0;
-int valorSensor;
-float valorTension = 0;
-unsigned int TIEMPO = 1000;
 char LF = 10;
-char CR = 13;
-String fechaYhora;
-String valorSenial;
-String datos = "";
-bool interrupcion = false;
-bool flag = false;
 String respuesta = "";
 
 SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
@@ -92,6 +76,7 @@ void loop()
   //comandoAT("AT#MWI=0","OK",10);
   comandoAT("AT+CSDF=1,2", "OK", 10);
   comandoAT("AT+CSQ", "OK", 10);
+  comandoAT("AT+CCLK?","OK",10);
   //comandoAT("AT+CALA=\"19:30:00+00\",0,4,,\"0\",0", "OK", 10);
 
   // --------- SMS ----------

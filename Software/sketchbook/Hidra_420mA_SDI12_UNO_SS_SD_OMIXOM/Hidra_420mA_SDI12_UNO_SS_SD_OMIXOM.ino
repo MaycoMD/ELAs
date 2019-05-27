@@ -118,7 +118,7 @@ void setup()
   digitalWrite(RELEpin, LOW);
   digitalWrite(LEDpin, LOW);
 
-  int frecuencia;
+  byte frecuencia;
   EEPROM.get(pFREC, frecuencia);
   byte tipoSensor;
   EEPROM.get(pTIPO, tipoSensor);
@@ -151,6 +151,7 @@ void setup()
       sensor_bateria();
       get_fecha_hora();
       get_senial();
+      set_alarma();
       enviar_sms();
     }
     borrar_sms();
@@ -424,12 +425,9 @@ bool enviar_datos(void)
               comando.concat(c);
               c = dataFile.read();
             }
-            if (comandoAT("RING", 1))
+            if (!comandoAT("201", 1))
             {
-              if (respuesta.indexOf("201") == -1)
-              {
-                flag = false;
-              }
+              flag = false;
             }
           }
         }
@@ -462,12 +460,9 @@ bool enviar_datos(void)
   comando.concat(fechaYhora);
   comando.concat("\"");
 
-  if (comandoAT("RING", 1))
+  if (comandoAT("201", 1))
   {
-    if (respuesta.indexOf("201") != -1)
-    {
-      return true;
-    }
+    return true;
   }
   guardar_datos();
   return false;
@@ -515,34 +510,30 @@ bool get_fecha_hora(void)
 //alarma.
 void set_alarma(void)
 {
-  String strHora = "0";
-  String strMinutos = "0";
-  int index = fechaYhora.indexOf(",");
-  String strHora_temp = fechaYhora.substring(index + 1, index + 3);
-  int hora = strHora_temp.toInt();
-  String strMinutos_temp = fechaYhora.substring(index + 4, index + 6);
-  int minutos = strMinutos_temp.toInt();
+  byte index = fechaYhora.indexOf(",");
+  String strHora = fechaYhora.substring(index + 1, index + 3);
+  byte hora = strHora.toInt();
+  String strMinutos = fechaYhora.substring(index + 4, index + 6);
+  byte minutos = strMinutos.toInt();
   bool seteada = 0;
-  int frecuencia;
+  byte frecuencia;
   EEPROM.get(pFREC, frecuencia);
 
   if (frecuencia < 60)
   {
-    int j = 60 / frecuencia;
-    int ifrec = 0;
-    for (int i = 1; i < j; i++)
+    byte j = 60 / frecuencia;
+    for (byte i = 1; i < j; i++)
     {
-      ifrec = frecuencia * i;
-      if (minutos < ifrec)
+      if (minutos < frecuencia * i)
       {
-        strMinutos_temp = String(ifrec);
-        if (ifrec < 10)
+        if (frecuencia * i < 10)
         {
-          strMinutos += strMinutos_temp;
+          strMinutos = "0";
+          strMinutos += String(frecuencia * i);
         }
         else
         {
-          strMinutos = strMinutos_temp;
+          strMinutos = String(frecuencia * i);;
         }
         seteada = 1;
         break;
@@ -559,15 +550,16 @@ void set_alarma(void)
   {
     strHora = "00";
   }
-  else if (hora < 24 && hora > 9)
+  if (hora < 24 && hora > 9)
   {
     strHora = String(hora);
   }
-  else
+  if (hora <= 9)
   {
-    strHora_temp = String(hora);
-    strHora += strHora_temp;
+    strHora = "0";
+    strHora += String(hora);
   }
+  
   comando = "AT+CALA=\"";
   comando.concat(strHora);
   comando.concat(":");
@@ -597,6 +589,10 @@ bool leer_sms()
   comando = "AT+CMGR=1";
   if (comandoATnoWDT("OK", 10))
   {
+    if (respuesta.indexOf("Reset") != -1)
+    {
+      return true;
+    }
     int index1 = respuesta.indexOf("<frec=");
     if (index1 != -1)
     {
@@ -623,6 +619,7 @@ bool leer_sms()
 //--------------------------------------------------------------------------------------
 bool enviar_sms(void)
 {
+  String alarma = comando.substring(9,17);
   comando = "AT+CMGF=1";
   if (comandoAT("OK", 1))
   {
@@ -633,27 +630,30 @@ bool enviar_sms(void)
       EEPROM.get(pID, id);
       unsigned int frec;
       EEPROM.get(pFREC, frec);
-      int delaySensor;
+      byte delaySensor;
       EEPROM.get(pDELAY, delaySensor);
       byte tipoSensor;
       EEPROM.get(pTIPO, tipoSensor);
 
-      comando = "ID: ";
+      comando = "";
       comando.concat(id);
-      comando.concat("\rFecha/hora: ");
+      comando.concat("\r");
       comando.concat(fechaYhora);
-      comando.concat("\rNivel: ");
+      comando.concat("\r");
+      comando.concat(alarma);
+      comando.concat("\r");
       comando.concat(valorSensor);
-      comando.concat("\rBateria: ");
+      comando.concat(" m\r");
       comando.concat(valorTension);
-      comando.concat("\rSenial: ");
+      comando.concat(" V\r");
       comando.concat(valorSenial);
-      comando.concat("\rFrec: ");
+      comando.concat(" ASU\r");
       comando.concat(frec);
-      comando.concat("\rSensor: ");
+      comando.concat(" min\r");
       comando.concat(tipoSensor);
-      comando.concat("\rDelay: ");
+      comando.concat("\r");
       comando.concat(delaySensor);
+      comando.concat(" seg");
       comando.concat(char(26));
 
       if (comandoAT("+CMGS", 1))
@@ -839,7 +839,7 @@ bool guardar_datos()
       dataFile.print(comando);
       dataFile.print("\r");
       flag = true;
-      Serial.println("Archivo guardado");
+      Serial.println(comando);
     }
     dataFile.close();
   }
@@ -856,7 +856,6 @@ bool iniciar_SD()
   }
   else
   {
-    Serial.println("error en SD");
     return false;
   }
 }
