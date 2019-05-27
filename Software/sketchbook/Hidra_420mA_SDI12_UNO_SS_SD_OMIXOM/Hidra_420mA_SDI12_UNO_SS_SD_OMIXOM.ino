@@ -559,7 +559,7 @@ void set_alarma(void)
     strHora = "0";
     strHora += String(hora);
   }
-  
+
   comando = "AT+CALA=\"";
   comando.concat(strHora);
   comando.concat(":");
@@ -593,24 +593,36 @@ bool leer_sms()
     {
       return true;
     }
-    int index1 = respuesta.indexOf("<frec=");
+    unsigned int index1 = respuesta.indexOf("<frec=");
     if (index1 != -1)
     {
-      int frecuencia;
-      int index2 = respuesta.indexOf(">");
+      unsigned int frecuencia;
+      unsigned int index2 = respuesta.indexOf(">");
       respuesta = respuesta.substring(index1 + 6, index2);
       frecuencia = int(respuesta.toInt());
       EEPROM.put(pFREC, frecuencia);
       return true;
     }
+    
     index1 = respuesta.indexOf("<id=");
     if (index1 != -1)
     {
       unsigned long id;
-      int index2 = respuesta.indexOf(">");
+      unsigned int index2 = respuesta.indexOf(">");
       respuesta = respuesta.substring(index1 + 4, index2);
       id = long(respuesta.toInt());
       EEPROM.put(pID, id);
+      return true;
+    }
+    
+    index1 = respuesta.indexOf("<delay=");
+    if (index1 != -1)
+    {
+      unsigned long delaySensor;
+      unsigned int index2 = respuesta.indexOf(">");
+      respuesta = respuesta.substring(index1 + 7, index2);
+      delaySensor = int(respuesta.toInt());
+      EEPROM.put(pDELAY, delaySensor);
       return true;
     }
     return false;
@@ -619,7 +631,7 @@ bool leer_sms()
 //--------------------------------------------------------------------------------------
 bool enviar_sms(void)
 {
-  String alarma = comando.substring(9,17);
+  String alarma = comando.substring(9, 17);
   comando = "AT+CMGF=1";
   if (comandoAT("OK", 1))
   {
