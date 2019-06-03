@@ -57,6 +57,7 @@
 #define pB 30
 #define pDELAY 35
 #define pTIPO 40
+#define pNUM 45
 
 // MAPEO EEPROM
 // 0 -> ID
@@ -68,6 +69,7 @@
 // 30 -> Ordenada al origen (b)
 // 35 -> Precalentamiento del sensor (delaySensor)
 // 40 -> Tipo de sensor
+// 45 -> Número de teléfono al cual enviar SMS
 
 //============================ ESTACIONES ============================
 
@@ -636,11 +638,15 @@ bool leer_sms()
 //--------------------------------------------------------------------------------------
 bool enviar_sms(void)
 {
+  unsigned long numero = 3513420474;
+  //EEPROM.get(pNUM,numero);
   String alarma = comando.substring(9, 17);
   comando = "AT+CMGF=1";
   if (comandoAT("OK", 1))
   {
-    comando = "AT+CMGS=\"3513420474\",129";
+    comando = "AT+CMGS=\"";
+    comando.concat(numero);
+    comando.concat("\",129");
     if (comandoAT(">", 1))
     {
       unsigned long id;

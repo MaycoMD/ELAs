@@ -45,6 +45,7 @@
 #define pB 30
 #define pDELAY 35
 #define pTIPO 40
+#define pNUM 45
 
 // MAPEO EEPROM
 // 0 -> ID
@@ -55,7 +56,8 @@
 // 25 -> Pendiente (m)
 // 30 -> Ordenada al origen (b)
 // 35 -> Precalentamiento (delaySensor)
-// 40 -> Tipo de sensor 
+// 40 -> Tipo de sensor
+// 45 -> Numero paara el envío de SMS
 
 // SENSORES:
 // 0 -> 4-20 mA
@@ -73,6 +75,7 @@
 #define LF 10
 #define CR 13
 
+unsigned long numero;
 unsigned long ID;
 unsigned int frecuencia;
 byte delaySensor;
@@ -139,6 +142,9 @@ void setup()
   Serial.print("Pre-calentamiento del sensor: ");
   Serial.print(delaySensor);
   Serial.println(" segundos");
+  EEPROM.get(pNUM, numero);
+  Serial.print("Centro de mensajes: ");
+  Serial.println(numero);
   EEPROM.get(pMIN, valorSensorMin);
   Serial.print("Valor minimo del sensor: ");
   Serial.println(valorSensorMin);
@@ -158,6 +164,7 @@ void setup()
   cambiar_tipo_sensor();
   cambiar_maxtotal();
   cambiar_delay();
+  cambiar_centroSMS();
 
   if (encender_sensor())
   {
@@ -196,6 +203,9 @@ void setup()
   Serial.print("Pre-calentamiento del sensor: ");
   Serial.print(delaySensor);
   Serial.println(" segundos");
+  EEPROM.get(pNUM, numero);
+  Serial.print("Centro de mensajes: ");
+  Serial.println(numero);
   EEPROM.get(pMIN, valorSensorMin);
   Serial.print("Valor minimo del sensor: ");
   Serial.println(valorSensorMin);
@@ -214,7 +224,7 @@ void setup()
 void loop()
 {
   digitalWrite(RELEpin, HIGH);
-  for(int i=0;i<delaySensor;i++)
+  for (int i = 0; i < delaySensor; i++)
   {
     delay(1000);
   }
@@ -404,6 +414,39 @@ void cambiar_delay()
       Serial.print(delaySensor);
       Serial.println(" segundos");
       EEPROM.put(pDELAY, delaySensor);
+      Serial.println("Almacenado en EEPROM");
+      return;
+    }
+    else if (respuesta.indexOf("n") != -1)
+    {
+      n = 0;
+      return;
+    }
+  }
+}
+//---------------------------------------------------------------------------
+void cambiar_centroSMS()
+{
+  bool n = 1;
+  delay(1000);
+  respuesta = "";
+  Serial.println();
+  while (n)
+  {
+    Serial.print("Modificar centro de mensajes? <s/n>: ");
+    respuesta = Serial.readStringUntil(CR);
+    Serial.println();
+    if (respuesta.indexOf("s") != -1)
+    {
+      Serial.println();
+      Serial.setTimeout(20000);
+      Serial.print("Introduzca el nuevo numero celular: ");
+      respuesta = Serial.readStringUntil(CR);
+      Serial.println();
+      numero = long(respuesta.toInt());
+      Serial.print("Centro de mensajes: ");
+      Serial.println(numero);
+      EEPROM.put(pNUM, numero);
       Serial.println("Almacenado en EEPROM");
       return;
     }
