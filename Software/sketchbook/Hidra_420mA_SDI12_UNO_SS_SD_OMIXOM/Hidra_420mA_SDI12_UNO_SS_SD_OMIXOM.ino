@@ -7,7 +7,7 @@
 #include <SPI.h>
 #include <SD.h>
 
-//========================== CONFIGURACIÓN PINES ==========================
+//========================== CONFIGURACIÓN PINES ================================
 #define VBATpin A0
 #define RELEpin A1
 #define s420 A2
@@ -47,7 +47,7 @@
 // A3 -> OTTa
 // A4 -> OTTb
 
-//============================= DIRECCIONES EEPROM =========================
+//============================= DIRECCIONES EEPROM =====================================
 #define pID 0
 #define pFREC 5
 #define pMAXT 10
@@ -71,7 +71,7 @@
 // 40 -> Tipo de sensor
 // 45 -> Número de teléfono al cual enviar SMS
 
-//============================ ESTACIONES ============================
+//============================ ESTACIONES ==============================================
 
 // ELR02 -> Inriville
 // ELR03 -> Piedras Blancas
@@ -79,7 +79,7 @@
 // ELF01 -> Cruz Alta
 // ELF02 -> Saladillo
 
-//=============================== VARIABLES ================================
+//=============================== VARIABLES ============================================
 float valorSensor;
 float valorTension;
 byte valorSenial;
@@ -88,7 +88,7 @@ String respuesta = "";
 String comando = "";
 volatile bool rtcFlag = false;
 
-//=============================== PROGRAMA ==================================
+//=============================== PROGRAMA =============================================
 /*---------------------------- CONFIGURACIONES INICIALES -----------------------------*/
 void setup()
 {
@@ -263,10 +263,60 @@ void SMSint()
 
 /*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
 
+//bool comandoAT(char resp[5], byte contador)
+//{
+//  Watchdog.enable(8000);
+//  Watchdog.reset();
+//  SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
+//  mySerial.begin(9600);
+//  char c;
+//  respuesta = "ERROR";
+//
+//  while (mySerial.available() > 0)
+//  {
+//    char basura = mySerial.read();
+//  }
+//
+//  while ((respuesta.indexOf(resp) == -1) && (contador != 0))
+//  {
+//    delay(500);
+//    respuesta = "";
+//    contador--;
+//    Serial.print(comando);
+//    mySerial.flush();
+//    Watchdog.reset();
+//    mySerial.println(comando);
+//    while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
+//    {
+//      while (mySerial.available())
+//      {
+//        c = mySerial.read();
+//        respuesta += c;
+//      }
+//    }
+//    Serial.println(respuesta);
+//  }
+//
+//  while (mySerial.available() > 0)
+//  {
+//    char basura = mySerial.read();
+//  }
+//  mySerial.flush();
+//  mySerial.end();
+//  Serial.flush();
+//  if (respuesta.indexOf(resp) != -1)
+//  {
+//    return true;
+//  }
+//  else
+//  {
+//    return false;
+//  }
+//}
+//---------------------------------------------------------------------------------------
 bool comandoAT(char resp[5], byte contador)
 {
-  Watchdog.enable(8000);
-  Watchdog.reset();
+  //Watchdog.disable();
   SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
   mySerial.begin(9600);
   char c;
@@ -284,7 +334,6 @@ bool comandoAT(char resp[5], byte contador)
     contador--;
     Serial.print(comando);
     mySerial.flush();
-    Watchdog.reset();
     mySerial.println(comando);
     while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
     {
@@ -303,57 +352,7 @@ bool comandoAT(char resp[5], byte contador)
   }
   mySerial.flush();
   mySerial.end();
-  Serial.flush();
-  if (respuesta.indexOf(resp) != -1)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-//--------------------------------------------------------------------------------------
-bool comandoATnoWDT(char resp[3], byte contador)
-{
-  Watchdog.disable();
-  SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
-  mySerial.begin(9600);
-  char c;
-  respuesta = "ERROR";
-
-  while (mySerial.available() > 0)
-  {
-    char basura = mySerial.read();
-  }
-
-  while ((respuesta.indexOf(resp) == -1) && (contador != 0))
-  {
-    delay(500);
-    respuesta = "";
-    contador--;
-    Serial.print(comando);
-    mySerial.flush();
-    Watchdog.reset();
-    mySerial.println(comando);
-    while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
-    {
-      while (mySerial.available())
-      {
-        c = mySerial.read();
-        respuesta += c;
-      }
-    }
-    Serial.println(respuesta);
-  }
-
-  while (mySerial.available() > 0)
-  {
-    char basura = mySerial.read();
-  }
-  mySerial.flush();
-  mySerial.end();
-  Serial.flush();
+  //Serial.flush();
   Watchdog.reset();
   Watchdog.enable(8000);
   Watchdog.reset();
@@ -401,7 +400,8 @@ bool conexion_gprs(void)
   if (comandoAT("OK", 10))
   {
     comando = "AT#GPRS=1";
-    if (comandoATnoWDT("OK", 20))
+    Watchdog.disable();
+    if (comandoAT("OK", 20))
     {
       return true;
     }
@@ -419,8 +419,7 @@ bool enviar_datos(void)
   //      dataFile = SD.open("datos", FILE_READ);
   //      if (dataFile)
   //      {
-  //        bool flag = true;
-  //        while (dataFile.available() && flag)
+  //        while (dataFile.available())
   //        {
   //          char c = dataFile.read();
   //          if (c == 'A')
@@ -431,17 +430,11 @@ bool enviar_datos(void)
   //              comando.concat(c);
   //              c = dataFile.read();
   //            }
-  //            if (!comandoAT("201", 1))
-  //            {
-  //              flag = false;
-  //            }
+  //            comandoAT("201",1);
   //          }
   //        }
-  //        if (flag == true)
-  //        {
-  //          dataFile.close();
-  //          SD.remove("datos");
-  //        }
+  //        dataFile.close();
+  //        SD.remove("datos");
   //      }
   //    }
   //    terminar_SD();
@@ -594,40 +587,41 @@ bool leer_sms()
   comando = "AT+CMGF=1";
   comandoAT("OK", 10);
   comando = "AT+CMGR=1";
-  if (comandoATnoWDT("OK", 10))
+  Watchdog.disable();
+  if (comandoAT("OK", 10))
   {
     if (respuesta.indexOf("Reset") != -1)
     {
       return true;
     }
-    byte index1 = respuesta.indexOf("<frec=");
+    byte index1 = respuesta.indexOf("<f=");
     if (index1 != -1)
     {
       byte frecuencia;
       byte index2 = respuesta.indexOf(">");
-      respuesta = respuesta.substring(index1 + 6, index2);
+      respuesta = respuesta.substring(index1 + 3, index2);
       frecuencia = int(respuesta.toInt());
       EEPROM.put(pFREC, frecuencia);
       return true;
     }
 
-    index1 = respuesta.indexOf("<id=");
+    index1 = respuesta.indexOf("<i=");
     if (index1 != -1)
     {
       unsigned long id;
       byte index2 = respuesta.indexOf(">");
-      respuesta = respuesta.substring(index1 + 4, index2);
+      respuesta = respuesta.substring(index1 + 3, index2);
       id = long(respuesta.toInt());
       EEPROM.put(pID, id);
       return true;
     }
 
-    index1 = respuesta.indexOf("<delay=");
+    index1 = respuesta.indexOf("<d=");
     if (index1 != -1)
     {
       byte delaySensor;
       byte index2 = respuesta.indexOf(">");
-      respuesta = respuesta.substring(index1 + 7, index2);
+      respuesta = respuesta.substring(index1 + 3, index2);
       delaySensor = int(respuesta.toInt());
       EEPROM.put(pDELAY, delaySensor);
       return true;
@@ -639,7 +633,7 @@ bool leer_sms()
 bool enviar_sms(void)
 {
   unsigned long numero = 3513420474;
-  //EEPROM.get(pNUM,numero);
+  EEPROM.get(pNUM, numero);
   String alarma = comando.substring(9, 17);
   comando = "AT+CMGF=1";
   if (comandoAT("OK", 1))
@@ -756,10 +750,9 @@ void sensor_sdi12(void)
 {
   Watchdog.reset();
   SDI12 mySDI12(SDIpin);
-  byte frecuencia;
-  EEPROM.get(pFREC, frecuencia);
   byte delaySensor;
   EEPROM.get(pDELAY, delaySensor);
+  mySDI12.begin();
 
   digitalWrite(RELEpin, HIGH);
   for (byte i = 0; i < delaySensor; i++)
@@ -768,12 +761,11 @@ void sensor_sdi12(void)
     delay(1000);
   }
 
-  mySDI12.begin();
   respuesta = "";
   delay(1000);
   mySDI12.sendCommand("0M!");
   delay(30);
-  while (mySDI12.available())  // build response string
+  while (mySDI12.available())
   {
     char c = mySDI12.read();
     if ((c != '\n') && (c != '\r'))
@@ -783,12 +775,11 @@ void sensor_sdi12(void)
     }
   }
   mySDI12.clearBuffer();
-  delay(1000);
-  respuesta = "";
 
+  respuesta = "";
+  delay(1000);
   mySDI12.sendCommand("0D0!");
   delay(30);
-
   while (mySDI12.available())
   {
     char c = mySDI12.read();
@@ -797,6 +788,7 @@ void sensor_sdi12(void)
       delay(5);
     }
   }
+  
   if (respuesta.length() > 1)
   {
     byte index = respuesta.indexOf('.');
@@ -806,7 +798,6 @@ void sensor_sdi12(void)
   mySDI12.clearBuffer();
 
   mySDI12.end();
-
   digitalWrite(RELEpin, LOW);
   Watchdog.reset();
   return;
