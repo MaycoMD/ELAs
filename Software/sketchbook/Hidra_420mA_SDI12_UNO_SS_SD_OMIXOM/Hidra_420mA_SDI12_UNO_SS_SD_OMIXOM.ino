@@ -22,7 +22,7 @@
 #define PWRMONpin 11
 #define LEDpin 13
 
-//MAPEO DE PINES DIGITALES:
+//MAPEO DE PINES
 // 0 -> Hardware Rx
 // 1 -> Hardware Tx
 // 2 -> Rain pin (Arduino reset interrupt)
@@ -38,29 +38,27 @@
 // 12 -> SD_MISO
 // 13 -> SD_CLK
 // 14 -> GND
-// A1 -> RELEpin
-// A5 -> SDI12pin
-
-//MAPEO DE PINES ANALÓGICOS:
 // A0 -> VBATpin
+// A1 -> RELEpin
 // A2 -> s420
 // A3 -> OTTa
 // A4 -> OTTb
+// A5 -> SDI12pin
 
 //============================= DIRECCIONES EEPROM =====================================
 #define pID 0
-#define pFREC 5
-#define pMAXT 10
-#define pMIN 15
-#define pMAX 20
-#define pM 25
-#define pB 30
-#define pDELAY 35
-#define pTIPO 40
-#define pNUM 45
+#define pFREC 10
+#define pMAXT 15
+#define pMIN 20
+#define pMAX 25
+#define pM 30
+#define pB 35
+#define pDELAY 40
+#define pTIPO 45
+#define pNUM 50
 
 // MAPEO EEPROM
-// 0 -> ID
+// 0 -> Identificador
 // 5 -> Frecuecia de transmisión
 // 10 -> Valor Máximo a medir
 // 15 -> Minimo (calibración)
@@ -72,12 +70,11 @@
 // 45 -> Número de teléfono al cual enviar SMS
 
 //============================ ESTACIONES ==============================================
-
-// ELR02 -> Inriville
+// 70001 -> Cruz Alta
+// 70002 -> Saladillo
+// 70003 -> Inriville
 // ELR03 -> Piedras Blancas
 // ELR04 -> Alpa Corral
-// ELF01 -> Cruz Alta
-// ELF02 -> Saladillo
 
 //=============================== VARIABLES ============================================
 float valorSensor;
@@ -120,9 +117,9 @@ void setup()
   digitalWrite(RELEpin, LOW);
   digitalWrite(LEDpin, LOW);
 
-  byte frecuencia;
+  byte frecuencia = 0;
   EEPROM.get(pFREC, frecuencia);
-  byte tipoSensor;
+  byte tipoSensor = 0;
   EEPROM.get(pTIPO, tipoSensor);
   if (tipoSensor == 0)
   {
@@ -140,6 +137,7 @@ void setup()
 
   if (reset_telit())
   {
+    //borrar_sms();
     if (leer_sms())
     {
       switch (tipoSensor)
@@ -262,58 +260,6 @@ void SMSint()
 
 
 /*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
-
-//bool comandoAT(char resp[5], byte contador)
-//{
-//  Watchdog.enable(8000);
-//  Watchdog.reset();
-//  SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
-//  mySerial.begin(9600);
-//  char c;
-//  respuesta = "ERROR";
-//
-//  while (mySerial.available() > 0)
-//  {
-//    char basura = mySerial.read();
-//  }
-//
-//  while ((respuesta.indexOf(resp) == -1) && (contador != 0))
-//  {
-//    delay(500);
-//    respuesta = "";
-//    contador--;
-//    Serial.print(comando);
-//    mySerial.flush();
-//    Watchdog.reset();
-//    mySerial.println(comando);
-//    while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
-//    {
-//      while (mySerial.available())
-//      {
-//        c = mySerial.read();
-//        respuesta += c;
-//      }
-//    }
-//    Serial.println(respuesta);
-//  }
-//
-//  while (mySerial.available() > 0)
-//  {
-//    char basura = mySerial.read();
-//  }
-//  mySerial.flush();
-//  mySerial.end();
-//  Serial.flush();
-//  if (respuesta.indexOf(resp) != -1)
-//  {
-//    return true;
-//  }
-//  else
-//  {
-//    return false;
-//  }
-//}
-//---------------------------------------------------------------------------------------
 bool comandoAT(char resp[5], byte contador)
 {
   //Watchdog.disable();
@@ -341,6 +287,7 @@ bool comandoAT(char resp[5], byte contador)
       {
         c = mySerial.read();
         respuesta += c;
+        delay(5);
       }
     }
     Serial.println(respuesta);
@@ -352,7 +299,6 @@ bool comandoAT(char resp[5], byte contador)
   }
   mySerial.flush();
   mySerial.end();
-  //Serial.flush();
   Watchdog.reset();
   Watchdog.enable(8000);
   Watchdog.reset();
@@ -515,7 +461,7 @@ void set_alarma(void)
   String strMinutos = fechaYhora.substring(index + 4, index + 6);
   byte minutos = strMinutos.toInt();
   bool seteada = 0;
-  byte frecuencia;
+  byte frecuencia = 0;
   EEPROM.get(pFREC, frecuencia);
 
   if (frecuencia < 60)
@@ -590,44 +536,47 @@ bool leer_sms()
   Watchdog.disable();
   if (comandoAT("OK", 10))
   {
-    if (respuesta.indexOf("Reset") != -1)
+    if (respuesta.length() > 10)
     {
-      return true;
-    }
-    byte index1 = respuesta.indexOf("<f=");
-    if (index1 != -1)
-    {
-      byte frecuencia;
-      byte index2 = respuesta.indexOf(">");
-      respuesta = respuesta.substring(index1 + 3, index2);
-      frecuencia = int(respuesta.toInt());
-      EEPROM.put(pFREC, frecuencia);
-      return true;
-    }
+      if (respuesta.indexOf("Reset") != -1)
+      {
+        return true;
+      }
+      byte index1 = respuesta.indexOf("<f=");
+      if (index1 != -1)
+      {
+        byte frecuencia;
+        byte index2 = respuesta.indexOf(">");
+        respuesta = respuesta.substring(index1 + 3, index2);
+        frecuencia = int(respuesta.toInt());
+        EEPROM.put(pFREC, frecuencia);
+        return true;
+      }
 
-    index1 = respuesta.indexOf("<i=");
-    if (index1 != -1)
-    {
-      unsigned long id;
-      byte index2 = respuesta.indexOf(">");
-      respuesta = respuesta.substring(index1 + 3, index2);
-      id = long(respuesta.toInt());
-      EEPROM.put(pID, id);
-      return true;
-    }
+      index1 = respuesta.indexOf("<i=");
+      if (index1 != -1)
+      {
+        unsigned long id;
+        byte index2 = respuesta.indexOf(">");
+        respuesta = respuesta.substring(index1 + 3, index2);
+        id = long(respuesta.toInt());
+        EEPROM.put(pID, id);
+        return true;
+      }
 
-    index1 = respuesta.indexOf("<d=");
-    if (index1 != -1)
-    {
-      byte delaySensor;
-      byte index2 = respuesta.indexOf(">");
-      respuesta = respuesta.substring(index1 + 3, index2);
-      delaySensor = int(respuesta.toInt());
-      EEPROM.put(pDELAY, delaySensor);
-      return true;
+      index1 = respuesta.indexOf("<d=");
+      if (index1 != -1)
+      {
+        byte delaySensor;
+        byte index2 = respuesta.indexOf(">");
+        respuesta = respuesta.substring(index1 + 3, index2);
+        delaySensor = int(respuesta.toInt());
+        EEPROM.put(pDELAY, delaySensor);
+        return true;
+      }
     }
-    return false;
   }
+  return false;
 }
 //--------------------------------------------------------------------------------------
 bool enviar_sms(void)
@@ -788,7 +737,7 @@ void sensor_sdi12(void)
       delay(5);
     }
   }
-  
+
   if (respuesta.length() > 1)
   {
     byte index = respuesta.indexOf('.');

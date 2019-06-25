@@ -37,15 +37,15 @@
 // 14 -> GND
 
 #define pID 0
-#define pFREC 5
-#define pMAXT 10
-#define pMIN 15
-#define pMAX 20
-#define pM 25
-#define pB 30
-#define pDELAY 35
-#define pTIPO 40
-#define pNUM 45
+#define pFREC 10
+#define pMAXT 15
+#define pMIN 20
+#define pMAX 25
+#define pM 30
+#define pB 35
+#define pDELAY 40
+#define pTIPO 45
+#define pNUM 50
 
 // MAPEO EEPROM
 // 0 -> ID
