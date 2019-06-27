@@ -77,6 +77,7 @@ void loop()
   comandoAT("AT+CSDF=1,2", "OK", 10);
   comandoAT("AT+CSQ", "OK", 10);
   comandoAT("AT+CCLK?", "OK", 10);
+  comandoAT("AT+CCLK=\"2019/06/27,17:52:00+00\"","OK",10);
   //comandoAT("AT+CALA=\"19:30:00+00\",0,4,,\"0\",0", "OK", 10);
 
   // --------- SMS ----------
