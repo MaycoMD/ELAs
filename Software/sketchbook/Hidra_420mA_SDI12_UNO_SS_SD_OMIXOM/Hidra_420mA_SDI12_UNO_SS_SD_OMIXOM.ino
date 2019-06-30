@@ -268,7 +268,6 @@ void SMSint()
 /*-------------------------- FUNCIONES CONTROL MÓDULO TELIT --------------------------*/
 bool comandoAT(char resp[5], byte contador)
 {
-  //Watchdog.disable();
   SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
   mySerial.begin(9600);
   char c;

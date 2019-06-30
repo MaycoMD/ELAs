@@ -1,5 +1,4 @@
 #include "SoftwareSerialMod.h"
-#include "SDI12Mod.h"
 #include <SPI.h>
 #include <EEPROM.h>
 
@@ -55,7 +54,7 @@
 // 20 -> Maximo (calibración)
 // 25 -> Pendiente (m)
 // 30 -> Ordenada al origen (b)
-// 35 -> Precalentamiento (delaySensor)
+// 35 -> Precalentamiento
 // 40 -> Tipo de sensor
 // 45 -> Numero paara el envío de SMS
 
@@ -75,25 +74,16 @@
 #define LF 10
 #define CR 13
 
-unsigned long numero;
-unsigned long ID;
-unsigned int frecuencia;
-byte delaySensor;
-byte tipoSensor;
+unsigned long u_long;
+unsigned int u_int;
+byte _byte;
+String _string;
+float _float;
 float valorMaxTotal;
 float valorSensorMax;
 float valorSensorMin;
 float m = 0.0;
 float b = 0.0;
-String valorSensor;
-float valorSensorTemp;
-float valorTension = 0.0;
-String fechaYhora;
-String valorSenial;
-String respuesta = "";
-
-SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
-SDI12 mySDI12(SDIpin);
 
 /*---------------------------- CONFIGURACIONES INICIALES -----------------------------*/
 void setup()
@@ -125,26 +115,26 @@ void setup()
   delay(1000);
 
   Serial.println();
-  EEPROM.get(pID, ID);
+  EEPROM.get(pID, u_long);
   Serial.print("Identificador de la estacion: ");
-  Serial.println(ID);
-  EEPROM.get(pFREC, frecuencia);
+  Serial.println(u_long);
+  EEPROM.get(pFREC, u_int);
   Serial.print("Frecuencia de transmision: ");
-  Serial.print(frecuencia);
+  Serial.print(u_int);
   Serial.println(" minutos");
-  EEPROM.get(pTIPO, tipoSensor);
+  EEPROM.get(pTIPO, _byte);
   Serial.print("Tipo de sensor: ");
-  Serial.println(tipoSensor);
+  Serial.println(_byte);
   EEPROM.get(pMAXT, valorMaxTotal);
   Serial.print("Valor maximo total: ");
   Serial.println(valorMaxTotal);
-  EEPROM.get(pDELAY, delaySensor );
+  EEPROM.get(pDELAY, _byte );
   Serial.print("Pre-calentamiento del sensor: ");
-  Serial.print(delaySensor);
+  Serial.print(_byte);
   Serial.println(" segundos");
-  EEPROM.get(pNUM, numero);
+  EEPROM.get(pNUM, u_long);
   Serial.print("Centro de mensajes: ");
-  Serial.println(numero);
+  Serial.println(u_long);
   EEPROM.get(pMIN, valorSensorMin);
   Serial.print("Valor minimo del sensor: ");
   Serial.println(valorSensorMin);
@@ -186,26 +176,26 @@ void setup()
   }
 
   Serial.println();
-  EEPROM.get(pID, ID);
+  EEPROM.get(pID, u_long);
   Serial.print("Identificador de la estacion: ");
-  Serial.println(ID);
-  EEPROM.get(pFREC, frecuencia);
+  Serial.println(u_long);
+  EEPROM.get(pFREC, u_int);
   Serial.print("Frecuencia de transmision: ");
-  Serial.print(frecuencia);
+  Serial.print(u_int);
   Serial.println(" minutos");
-  EEPROM.get(pTIPO, tipoSensor);
+  EEPROM.get(pTIPO, _byte);
   Serial.print("Tipo de sensor: ");
-  Serial.println(tipoSensor);
+  Serial.println(_byte);
   EEPROM.get(pMAXT, valorMaxTotal);
   Serial.print("Valor maximo total: ");
   Serial.println(valorMaxTotal);
-  EEPROM.get(pDELAY, delaySensor );
+  EEPROM.get(pDELAY, _byte );
   Serial.print("Pre-calentamiento del sensor: ");
-  Serial.print(delaySensor);
+  Serial.print(_byte);
   Serial.println(" segundos");
-  EEPROM.get(pNUM, numero);
+  EEPROM.get(pNUM, u_long);
   Serial.print("Centro de mensajes: ");
-  Serial.println(numero);
+  Serial.println(u_long);
   EEPROM.get(pMIN, valorSensorMin);
   Serial.print("Valor minimo del sensor: ");
   Serial.println(valorSensorMin);
@@ -223,66 +213,35 @@ void setup()
 /*--------------------- FIN CONFIGURACIONES INICIALES --------------------------------*/
 void loop()
 {
-  digitalWrite(RELEpin, HIGH);
-  for (int i = 0; i < delaySensor; i++)
-  {
-    delay(1000);
-  }
-  valorSensorTemp = 0.0;
-  for (int i = 0; i < 64; i++)
-  {
-    valorSensorTemp += analogRead(s420);
-    delay(100);
-  }
-  valorSensorTemp /= 64.0;
-  Serial.print(valorSensorTemp);
-  Serial.print(" -> ");
-  valorSensorTemp = (valorSensorTemp * m) - b;
-  valorSensor = String(valorSensorTemp);
-  Serial.print(valorSensor);
-  Serial.print(" -> ");
-  valorSensorTemp /= 1000.0;
-  if (valorSensorTemp >= 10.00)
-  {
-    valorSensor = "10.00";
-  }
-  else if (valorSensorTemp < 0.01)
-  {
-    valorSensor = "ERROR";
-  }
-  else
-  {
-    valorSensor = String(valorSensorTemp);
-  }
-  Serial.println(valorSensor);
+
 }
 //---------------------------------------------------------------------------------------
 void cambiar_id()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Modificar identificador? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       Serial.println();
       Serial.setTimeout(20000);
       Serial.print("Introduzca el nuevo identificador de la estacion: ");
-      respuesta = Serial.readStringUntil(CR);
+      _string = Serial.readStringUntil(CR);
       Serial.println();
-      ID = long(respuesta.toInt());
+      u_long = long(_string.toInt());
       Serial.print("Identificador: ");
-      Serial.println(ID);
-      EEPROM.put(pID, ID);
+      Serial.println(u_long);
+      EEPROM.put(pID, u_long);
       Serial.println("Almacenado en EEPROM");
       return;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return;
@@ -294,28 +253,28 @@ void cambiar_frecuencia()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Modificar frecuencia? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       Serial.println();
       Serial.setTimeout(20000);
       Serial.print("Introduzca la nueva frecuencia (en minutos): ");
-      respuesta = Serial.readStringUntil(CR);
+      _string = Serial.readStringUntil(CR);
       Serial.println();
-      frecuencia = int(respuesta.toInt());
+      u_int = int(_string.toInt());
       Serial.print("Frecuencia: ");
-      Serial.println(frecuencia);
-      EEPROM.put(pFREC, frecuencia);
+      Serial.println(u_int);
+      EEPROM.put(pFREC, u_int);
       Serial.println("Almacenado en EEPROM");
       return;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return;
@@ -327,30 +286,30 @@ void cambiar_tipo_sensor()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Cambiar tipo de sensor? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       Serial.println();
       Serial.setTimeout(20000);
       Serial.println("0 -> 4-20 mA");
       Serial.println("1 -> SDI-12");
       Serial.print("Introduzca el nuevo tipo de sensor: ");
-      respuesta = Serial.readStringUntil(CR);
+      _string = Serial.readStringUntil(CR);
       Serial.println();
-      tipoSensor = int(respuesta.toInt());
+      _byte = int(_string.toInt());
       Serial.print("Tipo de sensor: ");
-      Serial.println(tipoSensor);
-      EEPROM.put(pTIPO, tipoSensor);
+      Serial.println(_byte);
+      EEPROM.put(pTIPO, _byte);
       Serial.println("Almacenado en EEPROM");
       return;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return;
@@ -362,28 +321,28 @@ void cambiar_maxtotal()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Modificar distancia maxima? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       Serial.println();
       Serial.setTimeout(20000);
       Serial.print("Introduzca la nueva distancia maxima (en milimetros): ");
-      respuesta = Serial.readStringUntil(CR);
+      _string = Serial.readStringUntil(CR);
       Serial.println();
-      valorMaxTotal = int(respuesta.toInt());
+      valorMaxTotal = int(_string.toInt());
       Serial.print("Distancia maxima: ");
       Serial.println(valorMaxTotal);
       EEPROM.put(pMAXT, valorMaxTotal);
       Serial.println("Almacenado en EEPROM");
       return;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return;
@@ -395,29 +354,29 @@ void cambiar_delay()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Modificar precalentamiento? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       Serial.println();
       Serial.setTimeout(20000);
       Serial.print("Introduzca el nuevo tiempo de espera para el inicio del sensor (en segundos): ");
-      respuesta = Serial.readStringUntil(CR);
+      _string = Serial.readStringUntil(CR);
       Serial.println();
-      delaySensor = int(respuesta.toInt());
+      _byte = int(_string.toInt());
       Serial.print("Precalentamiento: ");
-      Serial.print(delaySensor);
+      Serial.print(_byte);
       Serial.println(" segundos");
-      EEPROM.put(pDELAY, delaySensor);
+      EEPROM.put(pDELAY, _byte);
       Serial.println("Almacenado en EEPROM");
       return;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return;
@@ -429,28 +388,28 @@ void cambiar_centroSMS()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Modificar centro de mensajes? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       Serial.println();
       Serial.setTimeout(20000);
       Serial.print("Introduzca el nuevo numero celular: ");
-      respuesta = Serial.readStringUntil(CR);
+      _string = Serial.readStringUntil(CR);
       Serial.println();
-      numero = long(respuesta.toInt());
+      u_long = long(_string.toInt());
       Serial.print("Centro de mensajes: ");
-      Serial.println(numero);
-      EEPROM.put(pNUM, numero);
+      Serial.println(u_long);
+      EEPROM.put(pNUM, u_long);
       Serial.println("Almacenado en EEPROM");
       return;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return;
@@ -462,26 +421,26 @@ bool encender_sensor()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Encender sensor? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       n = 0;
       Serial.println("Iniciando sensor... ");
       digitalWrite(RELEpin, HIGH);
-      for (int i = 0; i < delaySensor; i++)
+      for (int i = 0; i < _byte; i++)
       {
         delay(1000);
       }
       Serial.println("Sensor encendido");
       return true;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return false;
@@ -493,19 +452,19 @@ bool calibrar_sensor()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Calibrar sensor? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       n = 0;
       return true;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return false;
@@ -526,17 +485,17 @@ void calibracion_sensor_420ma(void)
   delay(5000);
   for (int j = 0; j < 10; j++)
   {
-    valorSensorTemp = 0.0;
+    _float = 0.0;
     for (int i = 0; i < 64; i++)
     {
-      valorSensorTemp += analogRead(s420);
+      _float += analogRead(s420);
       delay(100);
     }
-    valorSensorTemp /= 64.0;
-    Serial.println(valorSensorTemp);
-    if (valorSensorTemp < valorSensorMin)
+    _float /= 64.0;
+    Serial.println(_float);
+    if (_float < valorSensorMin)
     {
-      valorSensorMin = valorSensorTemp;
+      valorSensorMin = _float;
     }
   }
   Serial.print("Minimo: ");
@@ -551,17 +510,17 @@ void calibracion_sensor_420ma(void)
   delay(5000);
   for (int j = 0; j < 10; j++)
   {
-    valorSensorTemp = 0.0;
+    _float = 0.0;
     for (int i = 0; i < 64; i++)
     {
-      valorSensorTemp += analogRead(s420);
+      _float += analogRead(s420);
       delay(100);
     }
-    valorSensorTemp /= 64.0;
-    Serial.println(valorSensorTemp);
-    if (valorSensorTemp > valorSensorMax)
+    _float /= 64.0;
+    Serial.println(_float);
+    if (_float > valorSensorMax)
     {
-      valorSensorMax = valorSensorTemp;
+      valorSensorMax = _float;
     }
   }
   Serial.print("Maximo:");
@@ -593,19 +552,19 @@ bool encender_telit()
 {
   bool n = 1;
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.println();
   while (n)
   {
     Serial.print("Reiniciar Telit? <s/n>: ");
-    respuesta = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    if (respuesta.indexOf("s") != -1)
+    if (_string.indexOf("s") != -1)
     {
       n = 0;
       return true;
     }
-    else if (respuesta.indexOf("n") != -1)
+    else if (_string.indexOf("n") != -1)
     {
       n = 0;
       return false;
@@ -616,38 +575,34 @@ bool encender_telit()
 
 bool comandoAT(String comando, char resp[5], byte contador)
 {
+  SoftwareSerial mySerial = SoftwareSerial(RXpin, TXpin);
   mySerial.begin(9600);
   char c;
-  respuesta = "ERROR";
+  _string = "ERROR";
 
   while (mySerial.available() > 0)
   {
     char basura = mySerial.read();
   }
 
-  while ((respuesta.indexOf(resp) == -1) && (contador != 0))
+  while ((_string.indexOf(resp) == -1) && (contador != 0))
   {
-    delay(2000);
-    respuesta = "";
+    delay(500);
+    _string = "";
     contador--;
+    Serial.print(comando);
     mySerial.flush();
     mySerial.println(comando);
-    Serial.print(comando);
-    while ((respuesta.indexOf(resp) == -1) && (respuesta.indexOf("ERROR") == -1))
+    while ((_string.indexOf(resp) == -1) && (_string.indexOf("ERROR") == -1))
     {
-      do
+      while (mySerial.available())
       {
-        c = LF;
-        delay(20);
-        if (mySerial.available())
-        {
-          c = mySerial.read();
-          respuesta += c;
-        }
+        c = mySerial.read();
+        _string += c;
+        delay(5);
       }
-      while (c != LF);
     }
-    Serial.println(respuesta);
+    Serial.println(_string);
   }
 
   while (mySerial.available() > 0)
@@ -656,8 +611,7 @@ bool comandoAT(String comando, char resp[5], byte contador)
   }
   mySerial.flush();
   mySerial.end();
-  Serial.flush();
-  if (respuesta.indexOf(resp) != -1)
+  if (_string.indexOf(resp) != -1)
   {
     return true;
   }
@@ -700,12 +654,12 @@ bool apagar_telit(void)
 }
 //-----------------------------------------------------------------------------
 //Obtiene la fecha y hora actual del RTC del TELIT y lo guarda en el string
-//fechaYhora.
+//_string.
 void get_fecha_hora(void)
 {
   if (comandoAT("AT+CCLK?", "OK", 10))
   {
-    fechaYhora = respuesta.substring(10, 29);
+    _string = _string.substring(10, 29);
     return true;
   }
   return false;
@@ -716,18 +670,18 @@ void get_fecha_hora(void)
 void set_fecha_hora(void)
 {
   delay(1000);
-  respuesta = "";
+  _string = "";
   Serial.print("Configurar fecha/hora? <s/n>: ");
-  respuesta = Serial.readStringUntil(CR);
-  if (respuesta.indexOf("s") != -1)
+  _string = Serial.readStringUntil(CR);
+  if (_string.indexOf("s") != -1)
   {
-    fechaYhora = "";
+    _string = "";
     Serial.println();
     Serial.setTimeout(20000);
     Serial.print("Introduzca la fecha y hora en formato <aaaa/mm/dd,hh:mm:ss> (UTC-00): ");
-    fechaYhora = Serial.readStringUntil(CR);
+    _string = Serial.readStringUntil(CR);
     Serial.println();
-    comandoAT("AT+CCLK=\"" + fechaYhora + "+00\"", "OK", 10);
+    comandoAT("AT+CCLK=\"" + _string + "+00\"", "OK", 10);
   }
   return;
 }
