@@ -73,6 +73,9 @@
 // 70001 -> Cruz Alta
 // 70002 -> Saladillo
 // 70003 -> Inriville
+// 70004 -> LH
+// 70005 -> LH
+// 70006 -> LH
 // ELR03 -> Piedras Blancas
 // ELR04 -> Alpa Corral
 
@@ -132,8 +135,11 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
   interrupts();
 
-  iniciar_SD();
-  terminar_SD();
+  if (SD.begin(SDCSpin))
+  {
+    SD.end();
+  }
+
 
   if (reset_telit())
   {
@@ -357,34 +363,34 @@ bool conexion_gprs(void)
 //---------------------------------------------------------------------------------------
 bool enviar_datos(void)
 {
-  //  if (iniciar_SD())
-  //  {
-  //    if (SD.exists("datos"))
-  //    {
-  //      File dataFile;
-  //      dataFile = SD.open("datos", FILE_READ);
-  //      if (dataFile)
-  //      {
-  //        while (dataFile.available())
-  //        {
-  //          char c = dataFile.read();
-  //          if (c == 'A')
-  //          {
-  //            comando = "";
-  //            while (c != '\r')
-  //            {
-  //              comando.concat(c);
-  //              c = dataFile.read();
-  //            }
-  //            comandoAT("201",1);
-  //          }
-  //        }
-  //        dataFile.close();
-  //        SD.remove("datos");
-  //      }
-  //    }
-  //    terminar_SD();
-  //  }
+//    if (SD.begin(SDCSpin))
+//    {
+//      if (SD.exists("datos"))
+//      {
+//        File dataFile;
+//        dataFile = SD.open("datos", FILE_READ);
+//        if (dataFile)
+//        {
+//          while (dataFile.available())
+//          {
+//            char c = dataFile.read();
+//            if (c == 'A')
+//            {
+//              comando = "";
+//              while (c != '\r')
+//              {
+//                comando.concat(c);
+//                c = dataFile.read();
+//              }
+//              comandoAT("201",1);
+//            }
+//          }
+//          dataFile.close();
+//          SD.remove("datos");
+//        }
+//      }
+//      SD.end();
+//    }
 
   comando = "";
   unsigned long id;
@@ -774,60 +780,22 @@ void sensor_bateria()
 bool guardar_datos()
 {
   Watchdog.reset();
-  bool flag = false;
   File dataFile;
-  comando = "";
-  unsigned long id;
-  EEPROM.get(pID, id);
 
-  fechaYhora.replace("/", "-");
-  fechaYhora.replace(",", "%20");
-  comando = "AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=";
-  comando.concat(id);
-  comando.concat("&PASSWORD=vwrnlDhZtz&senial=");
-  comando.concat(valorSenial);
-  comando.concat("&nivel_rio=");
-  comando.concat(valorSensor);
-  comando.concat("&nivel_bat=");
-  comando.concat(valorTension);
-  comando.concat("&dateutc=");
-  comando.concat(fechaYhora);
-  comando.concat("\"");
-
-  if (iniciar_SD())
+  if (SD.begin(SDCSpin))
   {
     dataFile = SD.open("datos", FILE_WRITE);
     if (dataFile)
     {
       dataFile.print(comando);
       dataFile.print("\r");
-      flag = true;
       Serial.println(comando);
     }
     dataFile.close();
-  }
-  terminar_SD();
-  return flag;
-}
-//---------------------------------------------------------------------------------------
-bool iniciar_SD()
-{
-  Watchdog.reset();
-  if (SD.begin(SDCSpin))
-  {
+    SD.end();
     return true;
   }
-  else
-  {
-    return false;
-  }
-}
-//---------------------------------------------------------------------------------------
-void terminar_SD()
-{
-  Watchdog.reset();
-  SD.end();
-  return;
+  return false;
 }
 /*--------------------------- FIN FUNCIONES TARJETA SD -------------------------------*/
 
