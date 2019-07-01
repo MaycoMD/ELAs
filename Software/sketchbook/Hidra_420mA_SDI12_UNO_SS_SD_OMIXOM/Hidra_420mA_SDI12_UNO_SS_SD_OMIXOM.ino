@@ -198,6 +198,8 @@ void loop()
       digitalWrite(LEDpin, LOW);
       reset_telit();
       get_fecha_hora();
+      fechaYhora.replace("/", "-");
+      fechaYhora.replace(",", "%20");
       byte tipoSensor;
       EEPROM.get(pTIPO, tipoSensor);
       switch (tipoSensor)
@@ -362,41 +364,37 @@ bool conexion_gprs(void)
 //---------------------------------------------------------------------------------------
 bool enviar_datos(void)
 {
-//    if (SD.begin(SDCSpin))
-//    {
-//      if (SD.exists("datos"))
-//      {
-//        File dataFile;
-//        dataFile = SD.open("datos", FILE_READ);
-//        if (dataFile)
-//        {
-//          while (dataFile.available())
-//          {
-//            char c = dataFile.read();
-//            if (c == 'A')
-//            {
-//              comando = "";
-//              while (c != '\r')
-//              {
-//                comando.concat(c);
-//                c = dataFile.read();
-//              }
-//              comandoAT("201",1);
-//            }
-//          }
-//          dataFile.close();
-//          SD.remove("datos");
-//        }
-//      }
-//      SD.end();
-//    }
+  if (SD.begin(SDCSpin))
+  {
+    if (SD.exists("DATOS"))
+    {
+      File dataFile = SD.open("DATOS", FILE_READ);
+      if (dataFile)
+      {
+        while (dataFile.available())
+        {
+          char c = dataFile.read();
+          if (c == 'A')
+          {
+            comando = "";
+            while (c != ';')
+            {
+              comando.concat(c);
+              c = dataFile.read();
+            }
+            comandoAT("201", 1);
+          }
+        }
+        dataFile.close();
+        SD.remove("DATOS");
+      }
+    }
+    SD.end();
+  }
 
   comando = "";
   unsigned long id;
   EEPROM.get(pID, id);
-
-  fechaYhora.replace("/", "-");
-  fechaYhora.replace(",", "%20");
 
   comando = "AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=";
   comando.concat(id);
@@ -409,7 +407,6 @@ bool enviar_datos(void)
   comando.concat("&dateutc=");
   comando.concat(fechaYhora);
   comando.concat("\"");
-
   if (comandoAT("201", 1))
   {
     return true;
@@ -779,16 +776,27 @@ void sensor_bateria()
 bool guardar_datos()
 {
   Watchdog.reset();
-  File dataFile;
 
   if (SD.begin(SDCSpin))
   {
-    dataFile = SD.open("datos", FILE_WRITE);
+    File dataFile = SD.open("DATOS", FILE_WRITE);
     if (dataFile)
     {
-      dataFile.print(comando);
-      dataFile.print("\r");
-      Serial.println(comando);
+      comando = "";
+      unsigned long id;
+      EEPROM.get(pID, id);
+
+      dataFile.print("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=");
+      dataFile.print(id);
+      dataFile.print("&PASSWORD=vwrnlDhZtz&senial=");
+      dataFile.print(valorSenial);
+      dataFile.print("&nivel_rio=");
+      dataFile.print(valorSensor);
+      dataFile.print("&nivel_bat=");
+      dataFile.print(valorTension);
+      dataFile.print("&dateutc=");
+      dataFile.print(fechaYhora);
+      dataFile.print("\";\r");
     }
     dataFile.close();
     SD.end();
