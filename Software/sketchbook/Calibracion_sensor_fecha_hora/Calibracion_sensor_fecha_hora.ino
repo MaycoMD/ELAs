@@ -44,7 +44,8 @@
 #define pB 35
 #define pDELAY 40
 #define pTIPO 45
-#define pNUM 50
+#define pFLAG 50
+#define pNUM 55
 
 // MAPEO EEPROM
 // 0 -> ID

@@ -55,7 +55,8 @@
 #define pB 35
 #define pDELAY 40
 #define pTIPO 45
-#define pNUM 50
+#define pFLAG 50
+#define pNUM 55
 
 // MAPEO EEPROM
 // 0 -> Identificador
@@ -143,7 +144,17 @@ void setup()
 
   if (reset_telit())
   {
-    //borrar_sms();
+    byte bandera = 0;
+    EEPROM.get(pFLAG,bandera);
+    if(bandera==1)
+    {
+      bandera = 0;
+      EEPROM.put(pFLAG,bandera);
+    }
+    else
+    {
+      borrar_sms();
+    }
     if (leer_sms())
     {
       switch (tipoSensor)
@@ -259,6 +270,9 @@ void SMSint()
   delayMicroseconds(10000);
   if (digitalRead(SMSRCVpin) == HIGH)
   {
+    byte bandera = 1;
+    EEPROM.put(pFLAG,bandera);
+    delayMicroseconds(10000);
     digitalWrite((SYSRSTpin), HIGH);
   }
   interrupts();
