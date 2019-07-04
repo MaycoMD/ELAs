@@ -535,7 +535,6 @@ bool leer_sms()
   comando = "AT+CMGF=1";
   comandoAT("OK", 10);
   comando = "AT+CMGR=1";
-  Watchdog.disable();
   if (comandoAT("OK", 10))
   {
     if (respuesta.length() > 10)
@@ -544,8 +543,8 @@ bool leer_sms()
       {
         return true;
       }
-      byte index1 = respuesta.indexOf("<f=");
-      if (index1 != -1)
+      byte index1;
+      if (index1 = respuesta.indexOf("<f="))
       {
         byte frecuencia;
         byte index2 = respuesta.indexOf(">");
@@ -554,28 +553,24 @@ bool leer_sms()
         EEPROM.put(pFREC, frecuencia);
         return true;
       }
-
-      index1 = respuesta.indexOf("<i=");
-      if (index1 != -1)
-      {
-        unsigned long id;
-        byte index2 = respuesta.indexOf(">");
-        respuesta = respuesta.substring(index1 + 3, index2);
-        id = long(respuesta.toInt());
-        EEPROM.put(pID, id);
-        return true;
-      }
-
-      index1 = respuesta.indexOf("<d=");
-      if (index1 != -1)
-      {
-        byte delaySensor;
-        byte index2 = respuesta.indexOf(">");
-        respuesta = respuesta.substring(index1 + 3, index2);
-        delaySensor = int(respuesta.toInt());
-        EEPROM.put(pDELAY, delaySensor);
-        return true;
-      }
+//      else if (index1 = respuesta.indexOf("<i="))
+//      {
+//        unsigned long id;
+//        byte index2 = respuesta.indexOf(">");
+//        respuesta = respuesta.substring(index1 + 3, index2);
+//        id = long(respuesta.toInt());
+//        EEPROM.put(pID, id);
+//        return true;
+//      }
+//      else if (index1 = respuesta.indexOf("<d="))
+//      {
+//        byte delaySensor;
+//        byte index2 = respuesta.indexOf(">");
+//        respuesta = respuesta.substring(index1 + 3, index2);
+//        delaySensor = int(respuesta.toInt());
+//        EEPROM.put(pDELAY, delaySensor);
+//        return true;
+//      }
     }
   }
   return false;
