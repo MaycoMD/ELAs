@@ -57,7 +57,8 @@
 // 30 -> Ordenada al origen (b)
 // 35 -> Precalentamiento
 // 40 -> Tipo de sensor
-// 45 -> Numero paara el envío de SMS
+// 45 -> Banderas
+// 50 -> Número de teléfono al cual enviar SMS
 
 // SENSORES:
 // 0 -> 4-20 mA

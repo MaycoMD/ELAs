@@ -68,7 +68,8 @@
 // 30 -> Ordenada al origen (b)
 // 35 -> Precalentamiento del sensor (delaySensor)
 // 40 -> Tipo de sensor
-// 45 -> Número de teléfono al cual enviar SMS
+// 45 -> Banderas
+// 50 -> Número de teléfono al cual enviar SMS
 
 //============================ ESTACIONES ==============================================
 // 70001 -> Cruz Alta
