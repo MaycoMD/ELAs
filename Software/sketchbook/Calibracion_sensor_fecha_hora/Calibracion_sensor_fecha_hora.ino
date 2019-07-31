@@ -44,22 +44,23 @@
 #define pB 35
 #define pDELAY 40
 #define pTIPO 45
-#define pFLAG 50
-#define pNUM 55
+#define pF_RST 50
+#define pF_ONOFF 55
+#define pNUM 60
 
 // MAPEO EEPROM
-// 0 -> ID
+// 0 -> Identificador
 // 5 -> Frecuecia de transmisión
 // 10 -> Valor Máximo a medir
 // 15 -> Minimo (calibración)
 // 20 -> Maximo (calibración)
 // 25 -> Pendiente (m)
 // 30 -> Ordenada al origen (b)
-// 35 -> Precalentamiento
+// 35 -> Precalentamiento del sensor (delaySensor)
 // 40 -> Tipo de sensor
-// 45 -> Banderas
-// 50 -> Número de teléfono al cual enviar SMS
-
+// 45 -> Bandera de reset
+// 50 -> Bandera de On/Off
+// 55 -> Número de teléfono al cual enviar SMS
 // SENSORES:
 // 0 -> 4-20 mA
 // 1 -> SDI-12

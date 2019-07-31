@@ -55,8 +55,9 @@
 #define pB 35
 #define pDELAY 40
 #define pTIPO 45
-#define pFLAG 50
-#define pNUM 55
+#define pF_RST 50
+#define pF_ONOFF 55
+#define pNUM 60
 
 // MAPEO EEPROM
 // 0 -> Identificador
@@ -68,8 +69,9 @@
 // 30 -> Ordenada al origen (b)
 // 35 -> Precalentamiento del sensor (delaySensor)
 // 40 -> Tipo de sensor
-// 45 -> Banderas
-// 50 -> Número de teléfono al cual enviar SMS
+// 45 -> Bandera de reset
+// 50 -> Bandera de On/Off
+// 55 -> Número de teléfono al cual enviar SMS
 
 //============================ ESTACIONES ==============================================
 // 70001 -> Cruz Alta
@@ -146,11 +148,11 @@ void setup()
   if (reset_telit())
   {
     byte bandera = 0;
-    EEPROM.get(pFLAG,bandera);
-    if(bandera==1)
+    EEPROM.get(pF_RST, bandera);
+    if (bandera == 1)
     {
       bandera = 0;
-      EEPROM.put(pFLAG,bandera);
+      EEPROM.put(pF_RST, bandera);
     }
     else
     {
@@ -224,11 +226,19 @@ void loop()
       }
       sensor_bateria();
       get_senial();
-
-      if (conexion_gprs())
+      byte estado;
+      EEPROM.get(pF_ONOFF, estado);
+      if (estado != 0)
       {
-        enviar_datos();
-        desconexion_gprs();
+        if (conexion_gprs())
+        {
+          enviar_datos();
+          desconexion_gprs();
+        }
+        else
+        {
+          guardar_datos();
+        }
       }
       else
       {
@@ -237,12 +247,8 @@ void loop()
       get_fecha_hora();
       set_alarma();
       apagar_telit();
-      rtcFlag = false;
     }
-    else
-    {
-      rtcFlag = false;
-    }
+    rtcFlag = false;
   }
 }
 /*---------------------------- FIN PROGRAMA PRINCIPAL --------------------------------*/
@@ -272,7 +278,7 @@ void SMSint()
   if (digitalRead(SMSRCVpin) == HIGH)
   {
     byte bandera = 1;
-    EEPROM.put(pFLAG,bandera);
+    EEPROM.put(pF_RST, bandera);
     delayMicroseconds(10000);
     digitalWrite((SYSRSTpin), HIGH);
   }
@@ -554,8 +560,18 @@ bool leer_sms()
   {
     if (respuesta.length() > 10)
     {
-      if (respuesta.indexOf("Reset") != -1)
+      if (respuesta.indexOf("--reset") != -1)
       {
+        return true;
+      }
+      else if (respuesta.indexOf("--aus") != -1)
+      {
+        EEPROM.put(pF_ONOFF, 0);
+        return true;
+      }
+      else if (respuesta.indexOf("--an") != -1)
+      {
+        EEPROM.put(pF_ONOFF, 1);
         return true;
       }
       byte index1;
@@ -568,24 +584,24 @@ bool leer_sms()
         EEPROM.put(pFREC, frecuencia);
         return true;
       }
-//      else if (index1 = respuesta.indexOf("<i="))
-//      {
-//        unsigned long id;
-//        byte index2 = respuesta.indexOf(">");
-//        respuesta = respuesta.substring(index1 + 3, index2);
-//        id = long(respuesta.toInt());
-//        EEPROM.put(pID, id);
-//        return true;
-//      }
-//      else if (index1 = respuesta.indexOf("<d="))
-//      {
-//        byte delaySensor;
-//        byte index2 = respuesta.indexOf(">");
-//        respuesta = respuesta.substring(index1 + 3, index2);
-//        delaySensor = int(respuesta.toInt());
-//        EEPROM.put(pDELAY, delaySensor);
-//        return true;
-//      }
+      //      else if (index1 = respuesta.indexOf("<i="))
+      //      {
+      //        unsigned long id;
+      //        byte index2 = respuesta.indexOf(">");
+      //        respuesta = respuesta.substring(index1 + 3, index2);
+      //        id = long(respuesta.toInt());
+      //        EEPROM.put(pID, id);
+      //        return true;
+      //      }
+      //      else if (index1 = respuesta.indexOf("<d="))
+      //      {
+      //        byte delaySensor;
+      //        byte index2 = respuesta.indexOf(">");
+      //        respuesta = respuesta.substring(index1 + 3, index2);
+      //        delaySensor = int(respuesta.toInt());
+      //        EEPROM.put(pDELAY, delaySensor);
+      //        return true;
+      //      }
     }
   }
   return false;
@@ -612,10 +628,19 @@ bool enviar_sms(void)
       EEPROM.get(pDELAY, delaySensor);
       byte tipoSensor;
       EEPROM.get(pTIPO, tipoSensor);
+      byte estado;
+      EEPROM.get(pF_ONOFF, estado);
 
       comando = "";
       comando.concat(id);
-      comando.concat("\r");
+      if (estado != 0)
+      {
+        comando.concat(" ON\r");
+      }
+      else
+      {
+        comando.concat(" OFF\r");
+      }
       comando.concat(fechaYhora);
       comando.concat("\r");
       comando.concat(alarma);
@@ -631,7 +656,7 @@ bool enviar_sms(void)
       comando.concat(tipoSensor);
       comando.concat("\r");
       comando.concat(delaySensor);
-      comando.concat(" seg");
+      comando.concat(" seg\r");
       comando.concat(char(26));
 
       if (comandoAT("+CMGS", 1))
@@ -786,7 +811,6 @@ void sensor_bateria()
 bool guardar_datos()
 {
   Watchdog.reset();
-
   if (SD.begin(SDCSpin))
   {
     File dataFile = SD.open("DATOS", FILE_WRITE);

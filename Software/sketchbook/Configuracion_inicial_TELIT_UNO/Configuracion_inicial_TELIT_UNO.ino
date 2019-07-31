@@ -138,7 +138,7 @@ void loop()
     // ---------- CONEXIÓN HTTP -----------
     comandoAT("AT#HTTPCFG=0,\"new.omixom.com\",8001,0,,,0,120,1", "OK", 10);
     //comandoAT("AT#HTTPQRY=?", "OK", 10);
-    comandoAT("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=70005&PASSWORD=vwrnlDhZtz&senial=25&nivel_rio=6&nivel_bat=12&dateutc=2019-05-07%2021:40:00\"", "RING", 10); // Máx. 150 caracteres
+    comandoAT("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=70009&PASSWORD=vwrnlDhZtz&senial=25&nivel_rio=6&nivel_bat=12&dateutc=2019-05-07%2021:40:00\"", "RING", 10); // Máx. 150 caracteres
   }
   comandoAT("AT#GPRS=0", "OK", 10);
   comandoAT("AT#SYSHALT", "OK", 10);
