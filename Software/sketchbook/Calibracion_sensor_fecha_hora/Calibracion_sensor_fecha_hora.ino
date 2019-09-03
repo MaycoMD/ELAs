@@ -60,7 +60,8 @@
 // 40 -> Tipo de sensor
 // 45 -> Bandera de reset
 // 50 -> Bandera de On/Off
-// 55 -> Número de teléfono al cual enviar SMS
+// 55 -> Centro de mensajes SMS
+
 // SENSORES:
 // 0 -> 4-20 mA
 // 1 -> SDI-12
@@ -68,11 +69,17 @@
 // 3 -> Pulsos (No implementado)
 
 // ESTACIONES
-// ELR02 -> Inriville
+// 70001 -> Cruz Alta
+// 70002 -> Saladillo
+// 70003 -> Inriville
+// 70004 -> Saldán
+// 70005 -> Paso de Oscares
+// 70006 -> Paso de la Cina
+// 70007 -> LH
+// 70008 -> LH
+// 70009 -> LH
 // ELR03 -> Piedras Blancas
 // ELR04 -> Alpa Corral
-// ELF01 -> Cruz Alta
-// ELF02 -> Saladillo
 
 #define LF 10
 #define CR 13

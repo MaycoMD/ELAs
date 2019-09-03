@@ -1,4 +1,4 @@
-//============================= LIBRERÍAS ==================================
+  //============================= LIBRERÍAS ==================================
 #include <Adafruit_SleepyDog.h> // Watchdog Timer
 #include <avr/sleep.h>          // Sleep modes
 #include "SoftwareSerialMod.h"  // Software UART modificada
@@ -71,17 +71,26 @@
 // 40 -> Tipo de sensor
 // 45 -> Bandera de reset
 // 50 -> Bandera de On/Off
-// 55 -> Número de teléfono al cual enviar SMS
+// 55 -> Centro de mensajes SMS
 
 //============================ ESTACIONES ==============================================
 // 70001 -> Cruz Alta
 // 70002 -> Saladillo
 // 70003 -> Inriville
-// 70004 -> LH
-// 70005 -> LH
-// 70006 -> LH
+// 70004 -> Saldán
+// 70005 -> Paso de Oscares
+// 70006 -> Paso de la Cina
+// 70007 -> LH
+// 70008 -> LH
+// 70009 -> LH
 // ELR03 -> Piedras Blancas
 // ELR04 -> Alpa Corral
+
+//============================ COMANDOS SMS ============================================
+// --reset
+// --aus
+// --an
+// <f=xx>
 
 //=============================== VARIABLES ============================================
 float valorSensor;
