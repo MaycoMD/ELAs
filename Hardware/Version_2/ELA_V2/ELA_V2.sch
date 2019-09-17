@@ -1,0 +1,833 @@
+EESchema Schematic File Version 4
+EELAYER 26 0
+EELAYER END
+$Descr A3 16535 11693
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L MCU_Microchip_PIC18:PIC18F4550-IPT U?
+U 1 1 5D72984C
+P 4375 6000
+F 0 "U?" H 3375 7300 50  0000 C CNN
+F 1 "PIC18F4550-IPT" H 5125 7300 50  0000 C CNN
+F 2 "Package_QFP:TQFP-44_10x10mm_P0.8mm" H 4375 6200 50  0001 C CIN
+F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/39760d.pdf" H 4375 5750 50  0001 C CNN
+	1    4375 6000
+	1    0    0    -1  
+$EndComp
+$Comp
+L RF_Module:UL865 U?
+U 1 1 5D7299D0
+P 11250 5725
+F 0 "U?" H 11250 7703 50  0000 C CNN
+F 1 "UL865" H 11250 7612 50  0000 C CNN
+F 2 "RF_Module:Telit_xL865" H 11250 3125 50  0001 C CNN
+F 3 "http://www.telit.com/fileadmin/user_upload/products/Downloads/3G/Telit_UL865_Hardware_User_Guide_r8.pdf" H 11250 5225 50  0001 C CNN
+	1    11250 5725
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x02 J?
+U 1 1 5D729CF1
+P 900 700
+F 0 "J?" V 866 512 50  0000 R CNN
+F 1 "Conn_01x02" V 775 512 50  0000 R CNN
+F 2 "" H 900 700 50  0001 C CNN
+F 3 "~" H 900 700 50  0001 C CNN
+	1    900  700 
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Connector_Generic:Conn_01x02 J?
+U 1 1 5D729DB7
+P 3350 700
+F 0 "J?" V 3316 512 50  0000 R CNN
+F 1 "Conn_01x02" V 3225 512 50  0000 R CNN
+F 2 "" H 3350 700 50  0001 C CNN
+F 3 "~" H 3350 700 50  0001 C CNN
+	1    3350 700 
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Battery_Management:LTC4054XES5-4.2 U?
+U 1 1 5D729F93
+P 2400 1275
+F 0 "U?" H 2625 1525 50  0000 L CNN
+F 1 "LTC4054XES5-4.2" H 2400 925 50  0000 L CNN
+F 2 "Package_TO_SOT_SMD:TSOT-23-5" H 2400 775 50  0001 C CNN
+F 3 "http://cds.linear.com/docs/en/datasheet/405442xf.pdf" H 2400 1175 50  0001 C CNN
+	1    2400 1275
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	900  900  900  1000
+Text Label 1250 975  0    50   ~ 0
+Vpan
+Wire Wire Line
+	1250 975  1125 975 
+Wire Wire Line
+	1000 975  1000 900 
+Text Label 2025 925  2    50   ~ 0
+Vpan
+$Comp
+L power:GND #PWR?
+U 1 1 5D72BF94
+P 900 1000
+F 0 "#PWR?" H 900 750 50  0001 C CNN
+F 1 "GND" H 905 827 50  0000 C CNN
+F 2 "" H 900 1000 50  0001 C CNN
+F 3 "" H 900 1000 50  0001 C CNN
+	1    900  1000
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D72C0AF
+P 2400 1725
+F 0 "#PWR?" H 2400 1475 50  0001 C CNN
+F 1 "GND" H 2405 1552 50  0000 C CNN
+F 2 "" H 2400 1725 50  0001 C CNN
+F 3 "" H 2400 1725 50  0001 C CNN
+	1    2400 1725
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2400 1725 2400 1675
+$Comp
+L Device:D_ALT D?
+U 1 1 5D72CC29
+P 2225 925
+F 0 "D?" H 2225 709 50  0000 C CNN
+F 1 "D_ALT" H 2225 800 50  0000 C CNN
+F 2 "" H 2225 925 50  0001 C CNN
+F 3 "~" H 2225 925 50  0001 C CNN
+	1    2225 925 
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	2025 925  2075 925 
+Wire Wire Line
+	2375 925  2400 925 
+Wire Wire Line
+	2400 925  2400 975 
+Wire Wire Line
+	3350 900  3350 1275
+$Comp
+L power:GND #PWR?
+U 1 1 5D72D7B8
+P 3450 950
+F 0 "#PWR?" H 3450 700 50  0001 C CNN
+F 1 "GND" H 3455 777 50  0000 C CNN
+F 2 "" H 3450 950 50  0001 C CNN
+F 3 "" H 3450 950 50  0001 C CNN
+	1    3450 950 
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3450 950  3450 900 
+Text Label 3425 1275 0    50   ~ 0
+Vbatt
+$Comp
+L Regulator_Linear:LT1129-3.3_SO8 U?
+U 1 1 5D72E07F
+P 5450 1200
+F 0 "U?" H 5450 1542 50  0000 C CNN
+F 1 "LT1129-3.3_SO8" H 5450 1451 50  0000 C CNN
+F 2 "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm" H 5450 1500 50  0001 C CNN
+F 3 "http://cds.linear.com/docs/en/datasheet/112935ff.pdf" H 5450 1200 50  0001 C CNN
+	1    5450 1200
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:CP C?
+U 1 1 5D72E3DA
+P 11825 3600
+F 0 "C?" H 11943 3646 50  0000 L CNN
+F 1 "CP" H 11943 3555 50  0000 L CNN
+F 2 "" H 11863 3450 50  0001 C CNN
+F 3 "~" H 11825 3600 50  0001 C CNN
+	1    11825 3600
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D72E562
+P 11825 3825
+F 0 "#PWR?" H 11825 3575 50  0001 C CNN
+F 1 "GND" H 11830 3652 50  0000 C CNN
+F 2 "" H 11825 3825 50  0001 C CNN
+F 3 "" H 11825 3825 50  0001 C CNN
+	1    11825 3825
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	11825 3825 11825 3750
+Text Label 11925 3400 0    50   ~ 0
+Vbatt
+Wire Wire Line
+	11925 3400 11825 3400
+Wire Wire Line
+	11350 3400 11350 3925
+Wire Wire Line
+	11150 3925 11150 3400
+Wire Wire Line
+	11150 3400 11350 3400
+Connection ~ 11350 3400
+Wire Wire Line
+	11825 3450 11825 3400
+Connection ~ 11825 3400
+Wire Wire Line
+	11825 3400 11350 3400
+Text Label 4950 1100 2    50   ~ 0
+Vbatt
+Wire Wire Line
+	4950 1100 5050 1100
+Text Label 6025 1100 0    50   ~ 0
+3V3
+Wire Wire Line
+	6025 1100 5850 1100
+$Comp
+L power:GND #PWR?
+U 1 1 5D72F1EA
+P 5450 1550
+F 0 "#PWR?" H 5450 1300 50  0001 C CNN
+F 1 "GND" H 5455 1377 50  0000 C CNN
+F 2 "" H 5450 1550 50  0001 C CNN
+F 3 "" H 5450 1550 50  0001 C CNN
+	1    5450 1550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5450 1550 5450 1500
+$Comp
+L Connector:USB_B J?
+U 1 1 5D72F6F7
+P 6425 5300
+F 0 "J?" H 6196 5291 50  0000 R CNN
+F 1 "USB_B" H 6196 5200 50  0000 R CNN
+F 2 "" H 6575 5250 50  0001 C CNN
+F 3 " ~" H 6575 5250 50  0001 C CNN
+	1    6425 5300
+	-1   0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D73018A
+P 8050 4350
+F 0 "#PWR?" H 8050 4100 50  0001 C CNN
+F 1 "GND" H 8055 4177 50  0000 C CNN
+F 2 "" H 8050 4350 50  0001 C CNN
+F 3 "" H 8050 4350 50  0001 C CNN
+	1    8050 4350
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8050 4350 8050 4300
+Wire Wire Line
+	8050 4300 8100 4300
+Wire Wire Line
+	8100 4300 8100 4250
+Wire Wire Line
+	8000 4250 8000 4300
+Wire Wire Line
+	8000 4300 8050 4300
+Connection ~ 8050 4300
+$Comp
+L power:GND #PWR?
+U 1 1 5D730861
+P 11250 8050
+F 0 "#PWR?" H 11250 7800 50  0001 C CNN
+F 1 "GND" H 11255 7877 50  0000 C CNN
+F 2 "" H 11250 8050 50  0001 C CNN
+F 3 "" H 11250 8050 50  0001 C CNN
+	1    11250 8050
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	11250 8050 11250 8000
+Wire Wire Line
+	11250 8000 11350 8000
+Wire Wire Line
+	11350 8000 11350 7925
+Wire Wire Line
+	11250 8000 11150 8000
+Wire Wire Line
+	11150 8000 11150 7925
+Connection ~ 11250 8000
+$Comp
+L Device:CP C?
+U 1 1 5D731764
+P 12900 5000
+F 0 "C?" H 13018 5046 50  0000 L CNN
+F 1 "CP" H 13018 4955 50  0000 L CNN
+F 2 "" H 12938 4850 50  0001 C CNN
+F 3 "~" H 12900 5000 50  0001 C CNN
+	1    12900 5000
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5D731E8F
+P 12500 4625
+F 0 "R?" V 12293 4625 50  0000 C CNN
+F 1 "R" V 12384 4625 50  0000 C CNN
+F 2 "" V 12430 4625 50  0001 C CNN
+F 3 "~" H 12500 4625 50  0001 C CNN
+	1    12500 4625
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D732A0A
+P 12900 5225
+F 0 "#PWR?" H 12900 4975 50  0001 C CNN
+F 1 "GND" H 12905 5052 50  0000 C CNN
+F 2 "" H 12900 5225 50  0001 C CNN
+F 3 "" H 12900 5225 50  0001 C CNN
+	1    12900 5225
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	12900 5225 12900 5150
+Text Label 4450 4450 0    50   ~ 0
+3V3
+Wire Wire Line
+	4450 4450 4375 4450
+Wire Wire Line
+	4275 4450 4275 4600
+Wire Wire Line
+	4375 4600 4375 4450
+Connection ~ 4375 4450
+Wire Wire Line
+	4375 4450 4275 4450
+$Comp
+L Device:D_ALT D?
+U 1 1 5D734FAD
+P 1125 1200
+F 0 "D?" V 1079 1279 50  0000 L CNN
+F 1 "D_ALT" V 1170 1279 50  0000 L CNN
+F 2 "" H 1125 1200 50  0001 C CNN
+F 3 "~" H 1125 1200 50  0001 C CNN
+	1    1125 1200
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D735022
+P 1125 1425
+F 0 "#PWR?" H 1125 1175 50  0001 C CNN
+F 1 "GND" H 1130 1252 50  0000 C CNN
+F 2 "" H 1125 1425 50  0001 C CNN
+F 3 "" H 1125 1425 50  0001 C CNN
+	1    1125 1425
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1125 1425 1125 1350
+Wire Wire Line
+	1125 1050 1125 975 
+Connection ~ 1125 975 
+Wire Wire Line
+	1125 975  1000 975 
+$Comp
+L Device:Fuse F?
+U 1 1 5D736314
+P 3075 1275
+F 0 "F?" V 2878 1275 50  0000 C CNN
+F 1 "Fuse" V 2969 1275 50  0000 C CNN
+F 2 "" V 3005 1275 50  0001 C CNN
+F 3 "~" H 3075 1275 50  0001 C CNN
+	1    3075 1275
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	2925 1275 2800 1275
+Wire Wire Line
+	3350 1275 3225 1275
+Wire Wire Line
+	3425 1275 3350 1275
+Connection ~ 3350 1275
+$Comp
+L 74xGxx:74AUC2G32 U?
+U 1 1 5D73C152
+P 4675 1575
+F 0 "U?" H 4650 1842 50  0000 C CNN
+F 1 "74AUC2G32" H 4650 1751 50  0000 C CNN
+F 2 "" H 4675 1575 50  0001 C CNN
+F 3 "http://www.ti.com/lit/sg/scyt129e/scyt129e.pdf" H 4675 1575 50  0001 C CNN
+	1    4675 1575
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4925 1575 4975 1575
+Wire Wire Line
+	4975 1575 4975 1200
+Wire Wire Line
+	4975 1200 5050 1200
+Text Label 4300 1525 2    50   ~ 0
+TELIT_uEN
+Text Label 4300 1625 2    50   ~ 0
+uC_uEN
+Wire Wire Line
+	4300 1525 4375 1525
+Wire Wire Line
+	4375 1625 4300 1625
+Text Label 10050 5950 2    50   ~ 0
+TELIT_ALARM
+$Comp
+L Device:Crystal Y?
+U 1 1 5D7424B6
+P 2450 5600
+F 0 "Y?" V 2496 5469 50  0000 R CNN
+F 1 "Crystal" V 2405 5469 50  0000 R CNN
+F 2 "" H 2450 5600 50  0001 C CNN
+F 3 "~" H 2450 5600 50  0001 C CNN
+	1    2450 5600
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	3175 5500 2650 5500
+Wire Wire Line
+	2650 5500 2650 5400
+Wire Wire Line
+	2650 5400 2450 5400
+Wire Wire Line
+	2450 5400 2450 5450
+Wire Wire Line
+	3175 5700 2650 5700
+Wire Wire Line
+	2650 5700 2650 5800
+Wire Wire Line
+	2650 5800 2450 5800
+Wire Wire Line
+	2450 5800 2450 5750
+$Comp
+L Device:C C?
+U 1 1 5D7446BE
+P 2200 5800
+F 0 "C?" V 1948 5800 50  0000 C CNN
+F 1 "C" V 2039 5800 50  0000 C CNN
+F 2 "" H 2238 5650 50  0001 C CNN
+F 3 "~" H 2200 5800 50  0001 C CNN
+	1    2200 5800
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:C C?
+U 1 1 5D744849
+P 2200 5400
+F 0 "C?" V 1948 5400 50  0000 C CNN
+F 1 "C" V 2039 5400 50  0000 C CNN
+F 2 "" H 2238 5250 50  0001 C CNN
+F 3 "~" H 2200 5400 50  0001 C CNN
+	1    2200 5400
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D744C1A
+P 4325 7500
+F 0 "#PWR?" H 4325 7250 50  0001 C CNN
+F 1 "GND" H 4330 7327 50  0000 C CNN
+F 2 "" H 4325 7500 50  0001 C CNN
+F 3 "" H 4325 7500 50  0001 C CNN
+	1    4325 7500
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4375 7400 4375 7450
+Wire Wire Line
+	4375 7450 4325 7450
+Wire Wire Line
+	4325 7450 4325 7500
+Wire Wire Line
+	4275 7400 4275 7450
+Wire Wire Line
+	4275 7450 4325 7450
+Connection ~ 4325 7450
+$Comp
+L power:GND #PWR?
+U 1 1 5D7474CE
+P 1850 5650
+F 0 "#PWR?" H 1850 5400 50  0001 C CNN
+F 1 "GND" H 1855 5477 50  0000 C CNN
+F 2 "" H 1850 5650 50  0001 C CNN
+F 3 "" H 1850 5650 50  0001 C CNN
+	1    1850 5650
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2050 5800 2025 5800
+Wire Wire Line
+	2025 5800 2025 5600
+Wire Wire Line
+	2025 5600 1850 5600
+Wire Wire Line
+	1850 5600 1850 5650
+Wire Wire Line
+	2050 5400 2025 5400
+Wire Wire Line
+	2025 5400 2025 5600
+Connection ~ 2025 5600
+Wire Wire Line
+	2350 5400 2450 5400
+Connection ~ 2450 5400
+Wire Wire Line
+	2350 5800 2450 5800
+Connection ~ 2450 5800
+$Comp
+L Connector:USB_B_Micro J?
+U 1 1 5D74F900
+P 8100 3850
+F 0 "J?" H 8155 4317 50  0000 C CNN
+F 1 "USB_B_Micro" H 8155 4226 50  0000 C CNN
+F 2 "" H 8250 3800 50  0001 C CNN
+F 3 "~" H 8250 3800 50  0001 C CNN
+	1    8100 3850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6075 5200 6075 5400
+Wire Wire Line
+	6075 5400 6125 5400
+Wire Wire Line
+	6125 5100 6000 5100
+Wire Wire Line
+	6000 5100 6000 5700
+$Comp
+L power:GND #PWR?
+U 1 1 5D7555A5
+P 6475 5825
+F 0 "#PWR?" H 6475 5575 50  0001 C CNN
+F 1 "GND" H 6480 5652 50  0000 C CNN
+F 2 "" H 6475 5825 50  0001 C CNN
+F 3 "" H 6475 5825 50  0001 C CNN
+	1    6475 5825
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6475 5825 6475 5750
+Wire Wire Line
+	6475 5750 6525 5750
+Wire Wire Line
+	6525 5750 6525 5700
+Wire Wire Line
+	6425 5700 6425 5750
+Wire Wire Line
+	6425 5750 6475 5750
+Connection ~ 6475 5750
+Wire Wire Line
+	5575 5700 6000 5700
+Wire Wire Line
+	5575 5300 6125 5300
+Wire Wire Line
+	5575 5200 6075 5200
+Text Label 5625 5400 0    50   ~ 0
+uC_TX
+Text Label 5625 5500 0    50   ~ 0
+uC_RX
+Wire Wire Line
+	5625 5400 5575 5400
+Wire Wire Line
+	5625 5500 5575 5500
+Text Label 6125 6700 0    50   ~ 0
+3V3
+$Comp
+L Device:R R?
+U 1 1 5D767C8A
+P 6075 6900
+F 0 "R?" H 5950 6950 50  0000 L CNN
+F 1 "R" H 5975 6850 50  0000 L CNN
+F 2 "" V 6005 6900 50  0001 C CNN
+F 3 "~" H 6075 6900 50  0001 C CNN
+	1    6075 6900
+	1    0    0    -1  
+$EndComp
+$Comp
+L Switch:SW_Push SW?
+U 1 1 5D767EF5
+P 6325 7100
+F 0 "SW?" H 6325 7385 50  0000 C CNN
+F 1 "SW_Push" H 6325 7294 50  0000 C CNN
+F 2 "" H 6325 7300 50  0001 C CNN
+F 3 "" H 6325 7300 50  0001 C CNN
+	1    6325 7100
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D768257
+P 6575 7175
+F 0 "#PWR?" H 6575 6925 50  0001 C CNN
+F 1 "GND" H 6580 7002 50  0000 C CNN
+F 2 "" H 6575 7175 50  0001 C CNN
+F 3 "" H 6575 7175 50  0001 C CNN
+	1    6575 7175
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6075 6750 6075 6700
+Wire Wire Line
+	6075 6700 6125 6700
+Wire Wire Line
+	5575 7100 6075 7100
+Wire Wire Line
+	6075 7050 6075 7100
+Wire Wire Line
+	6125 7100 6075 7100
+Connection ~ 6075 7100
+Wire Wire Line
+	6575 7175 6575 7100
+Wire Wire Line
+	6575 7100 6525 7100
+$Comp
+L Connector:SIM_Card J?
+U 1 1 5D777C58
+P 8475 5125
+F 0 "J?" H 8520 5650 50  0000 C CNN
+F 1 "SIM_Card" H 8520 5559 50  0000 C CNN
+F 2 "" H 8475 5475 50  0001 C CNN
+F 3 " ~" H 8425 5125 50  0001 C CNN
+	1    8475 5125
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	8975 5325 9150 5325
+Wire Wire Line
+	9600 5325 9600 5125
+$Comp
+L Device:C_Small C?
+U 1 1 5D78D5F6
+P 9150 5475
+F 0 "C?" H 9050 5550 50  0000 L CNN
+F 1 "C_Small" H 8825 5400 50  0000 L CNN
+F 2 "" H 9150 5475 50  0001 C CNN
+F 3 "~" H 9150 5475 50  0001 C CNN
+	1    9150 5475
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C_Small C?
+U 1 1 5D78DA9C
+P 9500 5475
+F 0 "C?" H 9400 5550 50  0000 L CNN
+F 1 "C_Small" H 9175 5400 50  0000 L CNN
+F 2 "" H 9500 5475 50  0001 C CNN
+F 3 "~" H 9500 5475 50  0001 C CNN
+	1    9500 5475
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C_Small C?
+U 1 1 5D78DAF4
+P 9850 5475
+F 0 "C?" H 9750 5550 50  0000 L CNN
+F 1 "C_Small" H 9525 5400 50  0000 L CNN
+F 2 "" H 9850 5475 50  0001 C CNN
+F 3 "~" H 9850 5475 50  0001 C CNN
+	1    9850 5475
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D78DC42
+P 9150 5150
+F 0 "#PWR?" H 9150 4900 50  0001 C CNN
+F 1 "GND" H 9225 5025 50  0000 C CNN
+F 2 "" H 9150 5150 50  0001 C CNN
+F 3 "" H 9150 5150 50  0001 C CNN
+	1    9150 5150
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8975 4825 10350 4825
+Wire Wire Line
+	8975 5025 9500 5025
+Wire Wire Line
+	9150 5150 9150 5125
+Wire Wire Line
+	9150 5125 8975 5125
+Wire Wire Line
+	9600 5125 10350 5125
+Wire Wire Line
+	9150 5375 9150 5325
+Connection ~ 9150 5325
+Wire Wire Line
+	9150 5325 9600 5325
+Wire Wire Line
+	9500 5375 9500 5025
+Connection ~ 9500 5025
+Wire Wire Line
+	9500 5025 10350 5025
+Wire Wire Line
+	8975 4925 9850 4925
+Connection ~ 9850 4925
+Wire Wire Line
+	9850 4925 10350 4925
+Wire Wire Line
+	8400 3950 8700 3950
+Wire Wire Line
+	8700 3950 8700 4525
+Wire Wire Line
+	8700 4525 10350 4525
+Wire Wire Line
+	10350 4625 8775 4625
+Wire Wire Line
+	8775 4625 8775 3850
+Wire Wire Line
+	8775 3850 8400 3850
+Wire Wire Line
+	8400 3650 8850 3650
+Wire Wire Line
+	8850 3650 8850 4425
+Wire Wire Line
+	8850 4425 10350 4425
+$Comp
+L Connector:Micro_SD_Card J?
+U 1 1 5D7C0CCE
+P 1375 6825
+F 0 "J?" H 1325 7542 50  0000 C CNN
+F 1 "Micro_SD_Card" H 1325 7451 50  0000 C CNN
+F 2 "" H 2525 7125 50  0001 C CNN
+F 3 "http://katalog.we-online.de/em/datasheet/693072010801.pdf" H 1375 6825 50  0001 C CNN
+	1    1375 6825
+	-1   0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D7C1862
+P 9850 5600
+F 0 "#PWR?" H 9850 5350 50  0001 C CNN
+F 1 "GND" H 9925 5475 50  0000 C CNN
+F 2 "" H 9850 5600 50  0001 C CNN
+F 3 "" H 9850 5600 50  0001 C CNN
+	1    9850 5600
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D7C1980
+P 9500 5600
+F 0 "#PWR?" H 9500 5350 50  0001 C CNN
+F 1 "GND" H 9575 5475 50  0000 C CNN
+F 2 "" H 9500 5600 50  0001 C CNN
+F 3 "" H 9500 5600 50  0001 C CNN
+	1    9500 5600
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5D7C19BD
+P 9150 5600
+F 0 "#PWR?" H 9150 5350 50  0001 C CNN
+F 1 "GND" H 9225 5475 50  0000 C CNN
+F 2 "" H 9150 5600 50  0001 C CNN
+F 3 "" H 9150 5600 50  0001 C CNN
+	1    9150 5600
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	9150 5600 9150 5575
+Wire Wire Line
+	9500 5575 9500 5600
+Wire Wire Line
+	9850 5600 9850 5575
+Wire Wire Line
+	9850 4925 9850 5375
+$Comp
+L Logic_LevelTranslator:TXB0104D U?
+U 1 1 5D7DB24C
+P 8225 6850
+F 0 "U?" H 8225 6064 50  0000 C CNN
+F 1 "TXB0104D" H 8225 5973 50  0000 C CNN
+F 2 "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm" H 8225 6100 50  0001 C CNN
+F 3 "http://www.ti.com/lit/ds/symlink/txb0104.pdf" H 8335 6945 50  0001 C CNN
+	1    8225 6850
+	1    0    0    -1  
+$EndComp
+Text Label 10275 4225 2    50   ~ 0
+TELIT_RESET
+Wire Wire Line
+	10275 4225 10350 4225
+Text Label 10275 7225 2    50   ~ 0
+TELIT_RX
+Text Label 10275 7325 2    50   ~ 0
+TELIT_TX
+Wire Wire Line
+	10350 7325 10275 7325
+Wire Wire Line
+	10275 7225 10350 7225
+Text Label 12225 4825 0    50   ~ 0
+1V8
+Wire Wire Line
+	12225 4825 12150 4825
+Wire Wire Line
+	12225 4725 12225 4625
+Wire Wire Line
+	12225 4625 12350 4625
+Wire Wire Line
+	12900 4625 12900 4850
+Wire Wire Line
+	12150 4725 12225 4725
+Wire Wire Line
+	12650 4625 12900 4625
+Text Label 8375 6100 0    50   ~ 0
+1V8
+Wire Wire Line
+	8375 6100 8325 6100
+Wire Wire Line
+	8325 6100 8325 6150
+Text Label 8075 6100 2    50   ~ 0
+3V3
+Wire Wire Line
+	8075 6100 8125 6100
+Wire Wire Line
+	8125 6100 8125 6150
+Text Label 8675 6550 0    50   ~ 0
+TELIT_TX
+Text Label 8675 6750 0    50   ~ 0
+TELIT_RX
+Text Label 8675 7150 0    50   ~ 0
+TELIT_ALARM
+Text Label 8675 6950 0    50   ~ 0
+TELIT_RESET
+Wire Wire Line
+	10050 5950 10200 5950
+Wire Wire Line
+	10200 5950 10200 5625
+Wire Wire Line
+	10200 5625 10350 5625
+Wire Wire Line
+	8675 7150 8625 7150
+Wire Wire Line
+	8625 6950 8675 6950
+Wire Wire Line
+	8625 6550 8675 6550
+Wire Wire Line
+	8675 6750 8625 6750
+Text Label 7775 6550 2    50   ~ 0
+uC_RX
+Text Label 7775 6750 2    50   ~ 0
+uC_TX
+Text Label 7775 7150 2    50   ~ 0
+TELIT_uEN
+Wire Wire Line
+	7775 7150 7825 7150
+Wire Wire Line
+	7775 6750 7825 6750
+Wire Wire Line
+	7825 6550 7775 6550
+Text Label 7775 6950 2    50   ~ 0
+uC_TelitRST
+Wire Wire Line
+	7775 6950 7825 6950
+$EndSCHEMATC

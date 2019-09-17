@@ -47,7 +47,7 @@
 
 //============================= DIRECCIONES EEPROM =====================================
 #define pID 0
-#define pFREC 10
+//#define pFREC 10
 #define pMAXT 15
 #define pMIN 20
 #define pMAX 25
@@ -56,7 +56,7 @@
 #define pDELAY 40
 #define pTIPO 45
 #define pF_RST 50
-#define pF_ONOFF 55
+//#define pF_ONOFF 55
 #define pNUM 60
 
 // MAPEO EEPROM
@@ -133,26 +133,25 @@ void setup()
   digitalWrite(RELEpin, LOW);
   digitalWrite(LEDpin, LOW);
 
-  byte frecuencia = 0;
-  EEPROM.get(pFREC, frecuencia);
+  byte frecuencia = 10;
+//  EEPROM.get(pFREC, frecuencia);
   byte tipoSensor = 0;
   EEPROM.get(pTIPO, tipoSensor);
-  if (tipoSensor == 0)
-  {
-    if (frecuencia <= 5)
-    {
-      digitalWrite(RELEpin, HIGH);
-    }
-  }
+//  if (tipoSensor == 0)
+//  {
+//    if (frecuencia <= 5)
+//    {
+//      digitalWrite(RELEpin, HIGH);
+//    }
+//  }
 
   attachInterrupt(digitalPinToInterrupt(SMSRCVpin), SMSint, HIGH);
   interrupts();
 
-  if (SD.begin(SDCSpin))
-  {
-    SD.end();
-  }
-
+//  if (SD.begin(SDCSpin))
+//  {
+//    SD.end();
+//  }
 
   if (reset_telit())
   {
@@ -235,8 +234,9 @@ void loop()
       }
       sensor_bateria();
       get_senial();
-      byte estado;
-      EEPROM.get(pF_ONOFF, estado);
+      byte estado = 1;
+      //byte estado;
+      //EEPROM.get(pF_ONOFF, estado);
       if (estado != 0)
       {
         if (conexion_gprs())
@@ -244,15 +244,15 @@ void loop()
           enviar_datos();
           desconexion_gprs();
         }
-        else
-        {
-          guardar_datos();
-        }
+//        else
+//        {
+//          guardar_datos();
+//        }
       }
-      else
-      {
-        guardar_datos();
-      }
+//      else
+//      {
+//        guardar_datos();
+//      }
       get_fecha_hora();
       set_alarma();
       apagar_telit();
@@ -394,33 +394,33 @@ bool conexion_gprs(void)
 //---------------------------------------------------------------------------------------
 bool enviar_datos(void)
 {
-  if (SD.begin(SDCSpin))
-  {
-    if (SD.exists("DATOS"))
-    {
-      File dataFile = SD.open("DATOS", FILE_READ);
-      if (dataFile)
-      {
-        while (dataFile.available())
-        {
-          char c = dataFile.read();
-          if (c == 'A')
-          {
-            comando = "";
-            while (c != ';')
-            {
-              comando.concat(c);
-              c = dataFile.read();
-            }
-            comandoAT("201", 1);
-          }
-        }
-        dataFile.close();
-        SD.remove("DATOS");
-      }
-    }
-    SD.end();
-  }
+//  if (SD.begin(SDCSpin))
+//  {
+//    if (SD.exists("DATOS"))
+//    {
+//      File dataFile = SD.open("DATOS", FILE_READ);
+//      if (dataFile)
+//      {
+//        while (dataFile.available())
+//        {
+//          char c = dataFile.read();
+//          if (c == 'A')
+//          {
+//            comando = "";
+//            while (c != ';')
+//            {
+//              comando.concat(c);
+//              c = dataFile.read();
+//            }
+//            comandoAT("201", 1);
+//          }
+//        }
+//        dataFile.close();
+//        SD.remove("DATOS");
+//      }
+//    }
+//    SD.end();
+//  }
 
   comando = "";
   unsigned long id;
@@ -441,7 +441,7 @@ bool enviar_datos(void)
   {
     return true;
   }
-  guardar_datos();
+//  guardar_datos();
   return false;
 }
 //---------------------------------------------------------------------------------------
@@ -493,8 +493,8 @@ void set_alarma(void)
   String strMinutos = fechaYhora.substring(index + 4, index + 6);
   byte minutos = strMinutos.toInt();
   bool seteada = 0;
-  byte frecuencia = 0;
-  EEPROM.get(pFREC, frecuencia);
+  byte frecuencia = 10;
+  //EEPROM.get(pFREC, frecuencia);
 
   if (frecuencia < 60)
   {
@@ -573,26 +573,26 @@ bool leer_sms()
       {
         return true;
       }
-      else if (respuesta.indexOf("--aus") != -1)
-      {
-        EEPROM.put(pF_ONOFF, 0);
-        return true;
-      }
-      else if (respuesta.indexOf("--an") != -1)
-      {
-        EEPROM.put(pF_ONOFF, 1);
-        return true;
-      }
-      byte index1;
-      if (index1 = respuesta.indexOf("<f="))
-      {
-        byte frecuencia;
-        byte index2 = respuesta.indexOf(">");
-        respuesta = respuesta.substring(index1 + 3, index2);
-        frecuencia = int(respuesta.toInt());
-        EEPROM.put(pFREC, frecuencia);
-        return true;
-      }
+//      else if (respuesta.indexOf("--aus") != -1)
+//      {
+//        EEPROM.put(pF_ONOFF, 0);
+//        return true;
+//      }
+//      else if (respuesta.indexOf("--an") != -1)
+//      {
+//        EEPROM.put(pF_ONOFF, 1);
+//        return true;
+//      }
+//      byte index1;
+//      if (index1 = respuesta.indexOf("<f="))
+//      {
+//        byte frecuencia;
+//        byte index2 = respuesta.indexOf(">");
+//        respuesta = respuesta.substring(index1 + 3, index2);
+//        frecuencia = int(respuesta.toInt());
+//        EEPROM.put(pFREC, frecuencia);
+//        return true;
+//      }
       //      else if (index1 = respuesta.indexOf("<i="))
       //      {
       //        unsigned long id;
@@ -631,25 +631,26 @@ bool enviar_sms(void)
     {
       unsigned long id;
       EEPROM.get(pID, id);
-      byte frec;
-      EEPROM.get(pFREC, frec);
+      byte frec = 10;
+      //EEPROM.get(pFREC, frec);
       byte delaySensor;
       EEPROM.get(pDELAY, delaySensor);
       byte tipoSensor;
       EEPROM.get(pTIPO, tipoSensor);
-      byte estado;
-      EEPROM.get(pF_ONOFF, estado);
+      //byte estado = 1;
+      //EEPROM.get(pF_ONOFF, estado);
 
       comando = "";
       comando.concat(id);
-      if (estado != 0)
-      {
-        comando.concat(" ON\r");
-      }
-      else
-      {
-        comando.concat(" OFF\r");
-      }
+//      if (estado != 0)
+//      {
+//        comando.concat(" ON\r");
+//      }
+//      else
+//      {
+//        comando.concat(" OFF\r");
+//      }
+      comando.concat("\r");
       comando.concat(fechaYhora);
       comando.concat("\r");
       comando.concat(alarma);
@@ -697,8 +698,8 @@ void sensor_420ma(void)
   EEPROM.get(pM, m);
   float b;
   EEPROM.get(pB, b);
-  byte frecuencia;
-  EEPROM.get(pFREC, frecuencia);
+  byte frecuencia = 10;
+//  EEPROM.get(pFREC, frecuencia);
   byte delaySensor;
   EEPROM.get(pDELAY, delaySensor);
 
@@ -817,36 +818,36 @@ void sensor_bateria()
 
 
 /*----------------------------- FUNCIONES TARJETA SD ---------------------------------*/
-bool guardar_datos()
-{
-  Watchdog.reset();
-  if (SD.begin(SDCSpin))
-  {
-    File dataFile = SD.open("DATOS", FILE_WRITE);
-    if (dataFile)
-    {
-      comando = "";
-      unsigned long id;
-      EEPROM.get(pID, id);
-
-      dataFile.print("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=");
-      dataFile.print(id);
-      dataFile.print("&PASSWORD=vwrnlDhZtz&senial=");
-      dataFile.print(valorSenial);
-      dataFile.print("&nivel_rio=");
-      dataFile.print(valorSensor);
-      dataFile.print("&nivel_bat=");
-      dataFile.print(valorTension);
-      dataFile.print("&dateutc=");
-      dataFile.print(fechaYhora);
-      dataFile.print("\";\r");
-    }
-    dataFile.close();
-    SD.end();
-    return true;
-  }
-  return false;
-}
+//bool guardar_datos()
+//{
+//  Watchdog.reset();
+//  if (SD.begin(SDCSpin))
+//  {
+//    File dataFile = SD.open("DATOS", FILE_WRITE);
+//    if (dataFile)
+//    {
+//      comando = "";
+//      unsigned long id;
+//      EEPROM.get(pID, id);
+//
+//      dataFile.print("AT#HTTPQRY=0,0,\"/weatherstation/updateweatherstation.jsp?ID=");
+//      dataFile.print(id);
+//      dataFile.print("&PASSWORD=vwrnlDhZtz&senial=");
+//      dataFile.print(valorSenial);
+//      dataFile.print("&nivel_rio=");
+//      dataFile.print(valorSensor);
+//      dataFile.print("&nivel_bat=");
+//      dataFile.print(valorTension);
+//      dataFile.print("&dateutc=");
+//      dataFile.print(fechaYhora);
+//      dataFile.print("\";\r");
+//    }
+//    dataFile.close();
+//    SD.end();
+//    return true;
+//  }
+//  return false;
+//}
 /*--------------------------- FIN FUNCIONES TARJETA SD -------------------------------*/
 
 
