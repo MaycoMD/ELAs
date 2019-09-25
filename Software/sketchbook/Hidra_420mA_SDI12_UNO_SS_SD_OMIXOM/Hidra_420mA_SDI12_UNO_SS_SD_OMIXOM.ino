@@ -1,4 +1,4 @@
-//============================= LIBRERÍAS ==================================
+ //============================= LIBRERÍAS ==================================
 #include <Adafruit_SleepyDog.h> // Watchdog Timer
 #include <avr/sleep.h>          // Sleep modes
 #include "SoftwareSerialMod.h"  // Software UART modificada
