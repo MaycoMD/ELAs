@@ -63,7 +63,7 @@ void loop()
   comandoSDI12("0XRSS!");
   comandoSDI12("0XWSO0.0!");
   comandoSDI12("0XRSO!");
-  comandoSDI12("0XWIH10.0!");
+  comandoSDI12("0XWIH30.0!");
   comandoSDI12("0XRIH!");
   comandoSDI12("0XWIL0.0!");
   comandoSDI12("0WRIL!");

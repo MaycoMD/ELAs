@@ -5,7 +5,7 @@
 #include "SDI12Mod.h"           // SDI-12 modificada
 #include <EEPROM.h>
 #include <SPI.h>
-#include <SD.h>
+//#include <SD.h>   // Ocupa mucha memoria dinámica
 
 //========================== CONFIGURACIÓN PINES ================================
 #define VBATpin A0
@@ -694,6 +694,8 @@ bool borrar_sms(void)
 void sensor_420ma(void)
 {
   Watchdog.reset();
+  float maxTotal;
+  EEPROM.get(pMAXT,maxTotal);
   float m;
   EEPROM.get(pM, m);
   float b;
@@ -722,9 +724,9 @@ void sensor_420ma(void)
   valorSensor /= 64.0;
   valorSensor = (valorSensor * m) - b;
   valorSensor /= 1000.0;
-  if (valorSensor >= 10.00)
+  if (valorSensor >= maxTotal)
   {
-    valorSensor = 10.00;
+    valorSensor = maxTotal;
   }
   else if (valorSensor < 0.01)
   {
