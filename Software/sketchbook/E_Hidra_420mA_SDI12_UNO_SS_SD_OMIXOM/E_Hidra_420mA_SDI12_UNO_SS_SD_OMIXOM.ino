@@ -1,4 +1,4 @@
- //============================= LIBRERÍAS ==================================
+//============================= LIBRERÍAS ==================================
 #include <Adafruit_SleepyDog.h> // Watchdog Timer
 #include <avr/sleep.h>          // Sleep modes
 #include "SoftwareSerialMod.h"  // Software UART modificada
@@ -80,11 +80,9 @@
 // 70004 -> Saldán
 // 70005 -> Paso de Oscares
 // 70006 -> Paso de la Cina
-// 70007 -> LH
-// 70008 -> LH
+// 70007 -> Piedras Blancas
+// 70008 -> Alpa Corral
 // 70009 -> LH
-// ELR03 -> Piedras Blancas
-// ELR04 -> Alpa Corral
 
 //============================ COMANDOS SMS ============================================
 // --reset

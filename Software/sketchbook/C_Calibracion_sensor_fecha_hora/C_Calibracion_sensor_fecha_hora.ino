@@ -75,11 +75,9 @@
 // 70004 -> Saldán
 // 70005 -> Paso de Oscares
 // 70006 -> Paso de la Cina
-// 70007 -> LH
-// 70008 -> LH
+// 70007 -> Piedras Blancas
+// 70008 -> Alpa Corral
 // 70009 -> LH
-// ELR03 -> Piedras Blancas
-// ELR04 -> Alpa Corral
 
 #define LF 10
 #define CR 13
@@ -174,16 +172,16 @@ void setup()
     }
   }
 
-  if (encender_telit())
-  {
-    if (reset_telit())
-    {
-      get_fecha_hora();
-      set_fecha_hora();
-      Serial.println();
-      apagar_telit();
-    }
-  }
+//  if (encender_telit())
+//  {
+//    if (reset_telit())
+//    {
+//      get_fecha_hora();
+//      set_fecha_hora();
+//      Serial.println();
+//      apagar_telit();
+//    }
+//  }
 
   Serial.println();
   EEPROM.get(pID, u_long);

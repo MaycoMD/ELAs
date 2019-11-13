@@ -59,14 +59,23 @@ void loop()
   comandoSDI12("0V!");
   comandoSDI12("0M!");
   //comandoSDI12("0XSCS2.3!");    // Configura el sensor al nivel actual
-  comandoSDI12("0XWSS0.305!");
+  
+  //comandoSDI12("0XWSS0.305!");  // Configura la pendiente
+  comandoSDI12("0XWSS1.0!");
   comandoSDI12("0XRSS!");
-  comandoSDI12("0XWSO0.0!");
+  
+  //comandoSDI12("0XWSO0.0!");    // Configura el offset
+  comandoSDI12("0XWSO4.0!");
   comandoSDI12("0XRSO!");
-  comandoSDI12("0XWIH30.0!");
+  
+  //comandoSDI12("0XWIH30.0!");   // Valor en pantalla para los 20mA
+  comandoSDI12("0XWIH20.0!");
   comandoSDI12("0XRIH!");
-  comandoSDI12("0XWIL0.0!");
+
+  //comandoSDI12("0XWIL0.0!");    // Valor en pantalla para los 4mA
+  comandoSDI12("0XWIL4.0!");
   comandoSDI12("0WRIL!");
+  
   comandoSDI12("0XWLCD2!");
   comandoSDI12("0XRLCD!");
 
