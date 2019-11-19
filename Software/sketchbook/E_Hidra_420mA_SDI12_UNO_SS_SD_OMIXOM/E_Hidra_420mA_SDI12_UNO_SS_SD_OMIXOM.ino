@@ -178,7 +178,9 @@ void setup()
       get_fecha_hora();
       get_senial();
       set_alarma();
-      enviar_sms();
+      enviar_sms_martin();
+      set_alarma();
+      enviar_sms_mayco();
     }
     borrar_sms();
     get_fecha_hora();
@@ -614,10 +616,10 @@ bool leer_sms()
   return false;
 }
 //--------------------------------------------------------------------------------------
-bool enviar_sms(void)
+bool enviar_sms_mayco(void)
 {
   unsigned long numero = 3513420474;
-  EEPROM.get(pNUM, numero);
+  //EEPROM.get(pNUM, numero);
   String alarma = comando.substring(9, 17);
   comando = "AT+CMGF=1";
   if (comandoAT("OK", 1))
@@ -665,6 +667,69 @@ bool enviar_sms(void)
       comando.concat("\r");
       comando.concat(delaySensor);
       comando.concat(" seg\r");
+      comando.concat(char(26));
+
+      if (comandoAT("+CMGS", 1))
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+//--------------------------------------------------------------------------------------
+bool enviar_sms_martin(void)
+{
+  unsigned long numero = 3515171127;
+  //EEPROM.get(pNUM, numero);
+  String alarma = comando.substring(9, 17);
+  comando = "AT+CMGF=1";
+  if (comandoAT("OK", 1))
+  {
+    comando = "AT+CMGS=\"";
+    comando.concat(numero);
+    comando.concat("\",129");
+    if (comandoAT(">", 1))
+    {
+      unsigned long id;
+      EEPROM.get(pID, id);
+      byte frec = 10;
+      //EEPROM.get(pFREC, frec);
+      byte delaySensor;
+      EEPROM.get(pDELAY, delaySensor);
+      byte tipoSensor;
+      EEPROM.get(pTIPO, tipoSensor);
+      //byte estado = 1;
+      //EEPROM.get(pF_ONOFF, estado);
+
+      comando = "";
+      comando.concat(id);
+//      if (estado != 0)
+//      {
+//        comando.concat(" ON\r");
+//      }
+//      else
+//      {
+//        comando.concat(" OFF\r");
+//      }
+      comando.concat("\r\n");
+      comando.concat(fechaYhora);
+      comando.concat("\r\n");
+      comando.concat(alarma);
+      comando.concat("\r\n");
+      comando.concat(valorSensor);
+      comando.concat(" m\r\n");
+      comando.concat(valorTension);
+      comando.concat(" V\r\n");
+      comando.concat(valorSenial);
+      comando.concat(" ASU\r\n");
+      comando.concat(frec);
+      comando.concat(" min\r\n");
+      comando.concat(tipoSensor);
+      comando.concat("\r\n");
+      comando.concat(delaySensor);
+      comando.concat(" seg\r\n");
       comando.concat(char(26));
 
       if (comandoAT("+CMGS", 1))

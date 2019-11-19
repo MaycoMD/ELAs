@@ -4,6 +4,13 @@
     Es necesaria la utilización de un software capaz de emular una comunicación por puerto serie (HyperTerminal, minicom, etc.);
     y se debe configurar dicho software a 9600 baudios, 8N1, sin control de flujo.
 */
+
+// at
+//at+cclk?
+//at+cclk="aaaa/mm/dd,hh:mm:ss+00" +3 de hora actual
+//at+cclk?
+//at#syshalt
+
 #include "SoftwareSerialMod.h"
 
 #define SMSRCVpin 2
