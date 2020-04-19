@@ -93,9 +93,9 @@ void loop()
     com.concat(char(26));
     comandoAT(com, "+CMGS", 1);
   }
-  if (comandoAT("AT+CMGS=\"3515171127\",129", ">", 1))
+  if (comandoAT("AT+CMGS=\"3513420474\",129", ">", 1))
   {
-    String com = "hola martin segui trabajando ... :)";
+    String com = "Envio de SMS OK";
     com.concat(char(26));
     comandoAT(com, "+CMGS", 1);
   }
